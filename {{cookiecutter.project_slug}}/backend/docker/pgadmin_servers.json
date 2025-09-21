@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "{{cookiecutter.project_name}} Development",
+      "Group": "Development",
+      "Host": "postgres-dev",
+      "Port": 5432,
+      "MaintenanceDB": "{{cookiecutter.project_slug}}_dev",
+      "Username": "postgres",
+      "PassFile": "/pgpass",
+      "SSLMode": "prefer"
+    }
+  }
+}

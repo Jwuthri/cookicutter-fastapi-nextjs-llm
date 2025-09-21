@@ -1,0 +1,127 @@
+"""
+Health check endpoints for {{cookiecutter.project_name}}.
+"""
+
+from datetime import datetime
+from fastapi import APIRouter, Depends, status
+from typing import Dict, Any
+
+from app.config import Settings, get_settings
+from app.dependencies import (
+    check_redis_health,
+    check_kafka_health,
+    check_rabbitmq_health
+)
+from app.models.base import HealthResponse
+
+router = APIRouter()
+
+
+@router.get("/", response_model=HealthResponse)
+async def health_check(
+    settings: Settings = Depends(get_settings),
+    redis_health: bool = Depends(check_redis_health),
+    kafka_health: bool = Depends(check_kafka_health),
+    rabbitmq_health: bool = Depends(check_rabbitmq_health)
+) -> HealthResponse:
+    """
+    Comprehensive health check for all services.
+    """
+    services_status = {
+        "redis": "healthy" if redis_health else "unhealthy",
+        "kafka": "healthy" if kafka_health else "unhealthy",
+        "rabbitmq": "healthy" if rabbitmq_health else "unhealthy"
+    }
+    
+    # Overall status - healthy only if all services are healthy
+    overall_healthy = all([redis_health, kafka_health, rabbitmq_health])
+    
+    return HealthResponse(
+        status="healthy" if overall_healthy else "unhealthy",
+        timestamp=datetime.now().isoformat(),
+        service=settings.app_name,
+        version=settings.app_version,
+        environment=settings.environment,
+        services=services_status
+    )
+
+
+@router.get("/redis")
+async def redis_health_check(
+    redis_health: bool = Depends(check_redis_health)
+) -> Dict[str, Any]:
+    """Check Redis service health."""
+    return {
+        "service": "redis",
+        "status": "healthy" if redis_health else "unhealthy",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@router.get("/kafka") 
+async def kafka_health_check(
+    kafka_health: bool = Depends(check_kafka_health)
+) -> Dict[str, Any]:
+    """Check Kafka service health."""
+    return {
+        "service": "kafka", 
+        "status": "healthy" if kafka_health else "unhealthy",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@router.get("/rabbitmq")
+async def rabbitmq_health_check(
+    rabbitmq_health: bool = Depends(check_rabbitmq_health)
+) -> Dict[str, Any]:
+    """Check RabbitMQ service health."""
+    return {
+        "service": "rabbitmq",
+        "status": "healthy" if rabbitmq_health else "unhealthy", 
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@router.get("/ready")
+async def readiness_check(
+    redis_health: bool = Depends(check_redis_health),
+    kafka_health: bool = Depends(check_kafka_health),
+    rabbitmq_health: bool = Depends(check_rabbitmq_health)
+) -> Dict[str, Any]:
+    """
+    Readiness check - returns 200 only if all critical services are available.
+    Used by Kubernetes readiness probes.
+    """
+    ready = all([redis_health, kafka_health, rabbitmq_health])
+    
+    response = {
+        "ready": ready,
+        "timestamp": datetime.now().isoformat(),
+        "services": {
+            "redis": redis_health,
+            "kafka": kafka_health,
+            "rabbitmq": rabbitmq_health
+        }
+    }
+    
+    # Return 503 if not ready
+    if not ready:
+        from fastapi import Response
+        return Response(
+            content=response,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
+    
+    return response
+
+
+@router.get("/live")
+async def liveness_check() -> Dict[str, Any]:
+    """
+    Liveness check - basic health check that always returns 200 if the app is running.
+    Used by Kubernetes liveness probes.
+    """
+    return {
+        "alive": True,
+        "timestamp": datetime.now().isoformat()
+    }

@@ -1,0 +1,14 @@
+"""
+Main API v1 router for {{cookiecutter.project_name}}.
+"""
+
+from fastapi import APIRouter
+
+from app.api.v1 import chat, completions, health
+
+api_router = APIRouter(prefix="/v1")
+
+# Include all endpoint routers
+api_router.include_router(health.router, prefix="/health", tags=["health"])
+api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
+api_router.include_router(completions.router, prefix="/completions", tags=["completions"])

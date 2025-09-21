@@ -1,0 +1,273 @@
+# Development Docker Compose for {{cookiecutter.project_name}} Backend
+version: '3.8'
+
+networks:
+  {{cookiecutter.project_slug}}_dev_network:
+    driver: bridge
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+  kafka_dev_data:
+  zookeeper_dev_data:
+  rabbitmq_dev_data:
+
+services:
+  # Development Backend API Service
+  backend-dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: builder  # Use builder stage for development
+    container_name: {{cookiecutter.project_slug}}_backend_dev
+    restart: unless-stopped
+    ports:
+      - "{{cookiecutter.backend_port}}:{{cookiecutter.backend_port}}"
+      - "5678:5678"  # Debug port for remote debugging
+    volumes:
+      # Mount source code for hot reloading
+      - ../app:/app/app:delegated
+      - ../pyproject.toml:/app/pyproject.toml:delegated
+      - ../.env:/app/.env:delegated
+      # Mount logs for easier access
+      - ../logs:/app/logs:delegated
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - HOST=0.0.0.0
+      - PORT={{cookiecutter.backend_port}}
+      - RELOAD=true
+      - WORKERS=1
+      
+      # Database
+      {% if cookiecutter.include_database == "postgresql" %}
+      - DATABASE_URL=postgresql://postgres:postgres@postgres-dev:5432/{{cookiecutter.project_slug}}_dev
+      {% endif %}
+      
+      # Redis
+      - REDIS_URL=redis://redis-dev:6379/0
+      
+      # Kafka
+      - KAFKA_BOOTSTRAP_SERVERS=kafka-dev:9092
+      - KAFKA_GROUP_ID={{cookiecutter.project_slug}}_backend_dev
+      
+      # RabbitMQ
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq-dev:5672/
+      
+      # LLM Configuration (use environment variables or .env file)
+      {% if cookiecutter.llm_provider == "openai" %}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4}
+      {% elif cookiecutter.llm_provider == "anthropic" %}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-3-sonnet-20240229}
+      {% endif %}
+      
+      # Development Security (less strict)
+      - SECRET_KEY=dev-secret-key-not-for-production
+      - ACCESS_TOKEN_EXPIRE_MINUTES=1440  # 24 hours for dev convenience
+      
+      # CORS (more permissive for development)
+      - CORS_ORIGINS=http://localhost:{{cookiecutter.frontend_port}},http://127.0.0.1:{{cookiecutter.frontend_port}},http://localhost:3000,http://127.0.0.1:3000
+      
+      # Python development settings
+      - PYTHONPATH=/app
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      {% if cookiecutter.include_database == "postgresql" %}
+      - postgres-dev
+      {% endif %}
+      - redis-dev
+      - kafka-dev
+      - rabbitmq-dev
+    networks:
+      - {{cookiecutter.project_slug}}_dev_network
+    command: >
+      sh -c "
+        uv pip install debugpy &&
+        python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m uvicorn app.main:app 
+        --host 0.0.0.0 
+        --port {{cookiecutter.backend_port}} 
+        --reload 
+        --reload-dir /app/app 
+        --log-level debug
+      "
+    # Alternative command without debugpy:
+    # command: uvicorn app.main:app --host 0.0.0.0 --port {{cookiecutter.backend_port}} --reload --log-level debug
+
+  {% if cookiecutter.include_database == "postgresql" %}
+  # Development PostgreSQL Database
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: {{cookiecutter.project_slug}}_postgres_dev
+    restart: unless-stopped
+    ports:
+      - "{{cookiecutter.postgres_port}}:5432"
+    environment:
+      - POSTGRES_DB={{cookiecutter.project_slug}}_dev
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      # Mount init scripts for development data
+      - ../scripts/init-dev-db.sql:/docker-entrypoint-initdb.d/init-dev-db.sql:ro
+    networks:
+      - {{cookiecutter.project_slug}}_dev_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # pgAdmin for database management (development only)
+  pgadmin-dev:
+    image: dpage/pgadmin4:latest
+    container_name: {{cookiecutter.project_slug}}_pgadmin_dev
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@{{cookiecutter.project_slug}}.local
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    volumes:
+      - ./pgadmin_servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      - postgres-dev
+    networks:
+      - {{cookiecutter.project_slug}}_dev_network
+    profiles:
+      - pgadmin
+  {% endif %}
+
+  # Development Redis Cache
+  redis-dev:
+    image: redis:7-alpine
+    container_name: {{cookiecutter.project_slug}}_redis_dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - {{cookiecutter.project_slug}}_dev_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  # Redis Commander for Redis management (development only)
+  redis-commander-dev:
+    image: rediscommander/redis-commander:latest
+    container_name: {{cookiecutter.project_slug}}_redis_commander_dev
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis-dev:6379
+    depends_on:
+      - redis-dev
+    networks:
+      - {{cookiecutter.project_slug}}_dev_network
+    profiles:
+      - redis-ui
+
+  # Development Zookeeper for Kafka
+  zookeeper-dev:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: {{cookiecutter.project_slug}}_zookeeper_dev
+    restart: unless-stopped
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
+    volumes:
+      - zookeeper_dev_data:/var/lib/zookeeper/data
+    networks:
+      - {{cookiecutter.project_slug}}_dev_network
+
+  # Development Kafka Message Broker
+  kafka-dev:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: {{cookiecutter.project_slug}}_kafka_dev
+    restart: unless-stopped
+    depends_on:
+      - zookeeper-dev
+    ports:
+      - "9092:9092"
+      - "9093:9093"  # External access
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-dev:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-dev:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_LOG_RETENTION_HOURS: 24  # Shorter retention for dev
+      KAFKA_LOG_RETENTION_BYTES: 104857600  # 100MB for dev
+    volumes:
+      - kafka_dev_data:/var/lib/kafka/data
+    networks:
+      - {{cookiecutter.project_slug}}_dev_network
+
+  # Kafka UI for development
+  kafka-ui-dev:
+    image: provectuslabs/kafka-ui:latest
+    container_name: {{cookiecutter.project_slug}}_kafka_ui_dev
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-dev:9092
+    depends_on:
+      - kafka-dev
+    networks:
+      - {{cookiecutter.project_slug}}_dev_network
+    profiles:
+      - kafka-ui
+
+  # Development RabbitMQ Message Queue
+  rabbitmq-dev:
+    image: rabbitmq:3.12-management-alpine
+    container_name: {{cookiecutter.project_slug}}_rabbitmq_dev
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"  # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: /
+    volumes:
+      - rabbitmq_dev_data:/var/lib/rabbitmq
+    networks:
+      - {{cookiecutter.project_slug}}_dev_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Development Tools Container
+  dev-tools:
+    image: alpine:latest
+    container_name: {{cookiecutter.project_slug}}_dev_tools
+    restart: "no"
+    volumes:
+      - ../:/workspace
+    working_dir: /workspace
+    networks:
+      - {{cookiecutter.project_slug}}_dev_network
+    command: tail -f /dev/null
+    profiles:
+      - tools
+
+# Health check for all services
+# Run: docker-compose -f docker-compose.dev.yml exec backend-dev curl http://localhost:{{cookiecutter.backend_port}}/health
