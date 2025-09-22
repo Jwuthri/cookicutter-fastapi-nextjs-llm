@@ -10,7 +10,9 @@ import uuid as uuid_lib
 from app.core.memory.base import MemoryInterface
 from app.models.chat import ChatMessage, ChatSession
 from app.exceptions import DatabaseError
-from loguru import logger
+from ...utils.logging import get_logger
+
+logger = get_logger("weaviate_memory")
 
 try:
     import weaviate

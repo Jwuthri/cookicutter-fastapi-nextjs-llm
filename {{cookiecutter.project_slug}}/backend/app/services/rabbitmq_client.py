@@ -9,7 +9,9 @@ from typing import Any, Dict, Optional, Callable, List
 from aio_pika import connect, Message, DeliveryMode, ExchangeType
 from aio_pika.abc import AbstractConnection, AbstractChannel, AbstractQueue, AbstractExchange
 from aio_pika.patterns import ReplyTo
-from loguru import logger
+from ..utils.logging import get_logger
+
+logger = get_logger("rabbitmq_client")
 
 
 class RabbitMQClient:
@@ -22,6 +24,18 @@ class RabbitMQClient:
         self.exchanges: Dict[str, AbstractExchange] = {}
         self.queues: Dict[str, AbstractQueue] = {}
         self.consumers: Dict[str, asyncio.Task] = {}
+        self._initialized = False
+        
+    async def initialize(self):
+        """Initialize the RabbitMQ client (called by DI container)."""
+        if not self._initialized:
+            await self.connect()
+            self._initialized = True
+        
+    async def cleanup(self):
+        """Cleanup resources (called by DI container)."""
+        await self.disconnect()
+        self._initialized = False
         
     async def connect(self):
         """Initialize RabbitMQ connection."""

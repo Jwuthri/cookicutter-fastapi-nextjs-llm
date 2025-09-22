@@ -6,12 +6,12 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import (
-    get_chat_service,
-    get_conversation_service,
-    get_user_id_from_header,
+    get_chat_service_dep,
+    get_conversation_service_dep,
     validate_session_id,
     check_rate_limit
 )
+from app.core.security.clerk_auth import ClerkUser, get_current_user, require_current_user
 from app.models.chat import (
     ChatRequest,
     ChatResponse,
@@ -28,8 +28,8 @@ router = APIRouter()
 @router.post("/", response_model=ChatResponse)
 async def send_message(
     request: ChatRequest,
-    chat_service: ChatService = Depends(get_chat_service),
-    user_id: Optional[str] = Depends(get_user_id_from_header),
+    chat_service: ChatService = Depends(get_chat_service_dep),
+    current_user: Optional[ClerkUser] = Depends(get_current_user),
     _rate_limit_check = Depends(check_rate_limit)
 ) -> ChatResponse:
     """
@@ -40,6 +40,7 @@ async def send_message(
     and event publishing automatically.
     """
     try:
+        user_id = current_user.id if current_user else None
         response = await chat_service.process_message(
             message=request.message,
             session_id=request.session_id,
@@ -62,8 +63,8 @@ async def send_message(
 
 @router.get("/sessions", response_model=List[ChatSession])
 async def list_sessions(
-    conversation_service: ConversationService = Depends(get_conversation_service),
-    user_id: Optional[str] = Depends(get_user_id_from_header),
+    conversation_service: ConversationService = Depends(get_conversation_service_dep),
+    current_user: Optional[ClerkUser] = Depends(get_current_user),
     limit: int = 50,
     offset: int = 0
 ) -> List[ChatSession]:
@@ -74,6 +75,7 @@ async def list_sessions(
     only returns sessions for that user.
     """
     try:
+        user_id = current_user.id if current_user else None
         sessions = await conversation_service.list_sessions(
             user_id=user_id,
             limit=limit,
@@ -91,13 +93,14 @@ async def list_sessions(
 @router.get("/sessions/{session_id}", response_model=ChatSession)
 async def get_session(
     session_id: str = Depends(validate_session_id),
-    conversation_service: ConversationService = Depends(get_conversation_service),
-    user_id: Optional[str] = Depends(get_user_id_from_header)
+    conversation_service: ConversationService = Depends(get_conversation_service_dep),
+    current_user: Optional[ClerkUser] = Depends(get_current_user)
 ) -> ChatSession:
     """
     Get a specific chat session with full message history.
     """
     try:
+        user_id = current_user.id if current_user else None
         session = await conversation_service.get_session(
             session_id=session_id,
             user_id=user_id
@@ -123,13 +126,14 @@ async def get_session(
 @router.delete("/sessions/{session_id}")
 async def delete_session(
     session_id: str = Depends(validate_session_id),
-    conversation_service: ConversationService = Depends(get_conversation_service),
-    user_id: Optional[str] = Depends(get_user_id_from_header)
+    conversation_service: ConversationService = Depends(get_conversation_service_dep),
+    current_user: Optional[ClerkUser] = Depends(get_current_user)
 ) -> dict:
     """
     Delete a chat session and all its messages.
     """
     try:
+        user_id = current_user.id if current_user else None
         success = await conversation_service.delete_session(
             session_id=session_id,
             user_id=user_id
@@ -155,8 +159,8 @@ async def delete_session(
 @router.get("/sessions/{session_id}/messages", response_model=MessageHistory)
 async def get_session_messages(
     session_id: str = Depends(validate_session_id),
-    conversation_service: ConversationService = Depends(get_conversation_service),
-    user_id: Optional[str] = Depends(get_user_id_from_header),
+    conversation_service: ConversationService = Depends(get_conversation_service_dep),
+    current_user: Optional[ClerkUser] = Depends(get_current_user),
     limit: int = 100,
     offset: int = 0
 ) -> MessageHistory:
@@ -164,6 +168,7 @@ async def get_session_messages(
     Get paginated message history for a session.
     """
     try:
+        user_id = current_user.id if current_user else None
         messages = await conversation_service.get_session_messages(
             session_id=session_id,
             user_id=user_id,
@@ -189,13 +194,14 @@ async def get_session_messages(
 @router.post("/sessions/{session_id}/clear")
 async def clear_session(
     session_id: str = Depends(validate_session_id),
-    conversation_service: ConversationService = Depends(get_conversation_service),
-    user_id: Optional[str] = Depends(get_user_id_from_header)
+    conversation_service: ConversationService = Depends(get_conversation_service_dep),
+    current_user: Optional[ClerkUser] = Depends(get_current_user)
 ) -> dict:
     """
     Clear all messages from a session while keeping the session.
     """
     try:
+        user_id = current_user.id if current_user else None
         success = await conversation_service.clear_session_messages(
             session_id=session_id,
             user_id=user_id

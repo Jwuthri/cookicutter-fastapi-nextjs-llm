@@ -3,14 +3,35 @@ Authentication and authorization for {{cookiecutter.project_name}}.
 """
 
 import jwt
+import re
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 from app.config import Settings, get_settings
-from app.exceptions import UnauthorizedError
+from app.exceptions import UnauthorizedError, ValidationError
+from app.database.repositories import UserRepository, ApiKeyRepository
+from app.database.models import User, ApiKey
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def validate_password_strength(password: str, settings: Settings) -> bool:
+    """Validate password meets security requirements."""
+    if len(password) < settings.min_password_length:
+        raise ValidationError(f"Password must be at least {settings.min_password_length} characters long")
+    
+    if settings.require_numbers and not re.search(r'\d', password):
+        raise ValidationError("Password must contain at least one number")
+    
+    if settings.require_uppercase and not re.search(r'[A-Z]', password):
+        raise ValidationError("Password must contain at least one uppercase letter")
+    
+    if settings.require_special_chars and not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        raise ValidationError("Password must contain at least one special character")
+    
+    return True
 
 
 class AuthManager:
@@ -120,12 +141,15 @@ class AuthManager:
         return payload
 
 
-class SimpleAuthProvider:
-    """Simple authentication provider for basic auth needs."""
+class DatabaseAuthProvider:
+    """Database-backed authentication provider for production use."""
     
-    def __init__(self):
-        self.users = {}  # In production, use a database
-        self.api_keys = {}  # In production, use a database
+    def __init__(self, db: Session):
+        self.db = db
+        self.user_repo = UserRepository()
+        self.api_key_repo = ApiKeyRepository()
+        self.auth_manager = AuthManager(get_settings())
+        self.settings = get_settings()
     
     async def authenticate_user(self, username: str, password: str) -> Optional[Dict[str, Any]]:
         """
@@ -138,27 +162,61 @@ class SimpleAuthProvider:
         Returns:
             User data if authenticated, None otherwise
         """
-        if username not in self.users:
+        user = self.user_repo.get_by_username(self.db, username)
+        if not user or not user.is_active:
             return None
         
-        user_data = self.users[username]
-        auth_manager = AuthManager(get_settings())
-        
-        if not auth_manager.verify_password(password, user_data["password_hash"]):
+        if not self.auth_manager.verify_password(password, user.password_hash):
             return None
+        
+        # Update last login
+        self.user_repo.update_last_login(self.db, user.id)
         
         return {
-            "user_id": user_data["user_id"],
-            "username": username,
-            "email": user_data.get("email"),
-            "is_active": user_data.get("is_active", True)
+            "user_id": str(user.id),
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_active": user.is_active,
+            "is_superuser": user.is_superuser
+        }
+    
+    async def authenticate_by_email(self, email: str, password: str) -> Optional[Dict[str, Any]]:
+        """
+        Authenticate a user with email and password.
+        
+        Args:
+            email: Email address
+            password: Password
+            
+        Returns:
+            User data if authenticated, None otherwise
+        """
+        user = self.user_repo.get_by_email(self.db, email)
+        if not user or not user.is_active:
+            return None
+        
+        if not self.auth_manager.verify_password(password, user.password_hash):
+            return None
+        
+        # Update last login
+        self.user_repo.update_last_login(self.db, user.id)
+        
+        return {
+            "user_id": str(user.id),
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_active": user.is_active,
+            "is_superuser": user.is_superuser
         }
     
     async def create_user(
         self, 
         username: str, 
         password: str, 
-        email: Optional[str] = None
+        email: str,
+        full_name: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Create a new user.
@@ -166,30 +224,41 @@ class SimpleAuthProvider:
         Args:
             username: Username
             password: Plain password
-            email: Optional email
+            email: Email address
+            full_name: Optional full name
             
         Returns:
             User data
+            
+        Raises:
+            ValidationError: If user data is invalid
         """
-        auth_manager = AuthManager(get_settings())
-        user_id = f"user_{len(self.users) + 1}"
+        # Validate password strength
+        validate_password_strength(password, self.settings)
         
-        user_data = {
-            "user_id": user_id,
-            "username": username,
-            "email": email,
-            "password_hash": auth_manager.get_password_hash(password),
-            "is_active": True,
-            "created_at": datetime.utcnow().isoformat()
-        }
+        # Check if user already exists
+        if self.user_repo.get_by_username(self.db, username):
+            raise ValidationError("Username already exists")
         
-        self.users[username] = user_data
+        if self.user_repo.get_by_email(self.db, email):
+            raise ValidationError("Email already exists")
+        
+        # Create user
+        user = self.user_repo.create(
+            db=self.db,
+            username=username,
+            email=email,
+            password_hash=self.auth_manager.get_password_hash(password),
+            full_name=full_name,
+            is_active=True
+        )
         
         return {
-            "user_id": user_id,
-            "username": username,
-            "email": email,
-            "is_active": True
+            "user_id": str(user.id),
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_active": user.is_active
         }
     
     async def verify_api_key(self, api_key: str) -> Optional[Dict[str, Any]]:
@@ -203,20 +272,74 @@ class SimpleAuthProvider:
             API key data if valid, None otherwise
         """
         try:
-            auth_manager = AuthManager(get_settings())
-            payload = auth_manager.verify_api_key(api_key)
-            return payload
+            # First try to decode as JWT
+            payload = self.auth_manager.verify_api_key(api_key)
+            
+            # Verify against database
+            db_key = self.api_key_repo.get_by_key_hash(
+                self.db, 
+                self.auth_manager.get_password_hash(api_key)
+            )
+            
+            if not db_key or not db_key.is_active:
+                return None
+            
+            # Update last used
+            self.api_key_repo.update_last_used(self.db, db_key.id)
+            
+            return {
+                "api_key_id": str(db_key.id),
+                "user_id": str(db_key.user_id),
+                "name": db_key.name,
+                "permissions": db_key.permissions or {}
+            }
         except UnauthorizedError:
             return None
+    
+    async def create_api_key(
+        self, 
+        user_id: str, 
+        name: str,
+        permissions: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, str]:
+        """
+        Create an API key for a user.
+        
+        Args:
+            user_id: User ID
+            name: API key name
+            permissions: Optional permissions dict
+            
+        Returns:
+            API key data including the actual key
+        """
+        # Generate the API key
+        key_data = {
+            "user_id": user_id,
+            "type": "api_key",
+            "name": name,
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        api_key = self.auth_manager.create_api_key(user_id, name)
+        
+        # Store in database
+        db_key = self.api_key_repo.create(
+            db=self.db,
+            user_id=int(user_id),
+            name=name,
+            key_hash=self.auth_manager.get_password_hash(api_key),
+            permissions=permissions or {}
+        )
+        
+        return {
+            "api_key_id": str(db_key.id),
+            "api_key": api_key,  # Only returned once!
+            "name": name
+        }
 
 
-# Global auth provider instance
-_auth_provider: Optional[SimpleAuthProvider] = None
-
-
-def get_auth_provider() -> SimpleAuthProvider:
-    """Get the global auth provider instance."""
-    global _auth_provider
-    if _auth_provider is None:
-        _auth_provider = SimpleAuthProvider()
-    return _auth_provider
+# Auth provider factory
+def get_auth_provider(db: Session) -> DatabaseAuthProvider:
+    """Get a database auth provider instance."""
+    return DatabaseAuthProvider(db)

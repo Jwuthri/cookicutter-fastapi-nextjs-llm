@@ -2,73 +2,128 @@
 Dependency injection for {{cookiecutter.project_name}}.
 """
 
-from functools import lru_cache
-from typing import Generator
+import asyncio
+from typing import Generator, TypeVar, Type
+from contextlib import asynccontextmanager
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
+from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
+from app.core.container import get_container, DIContainer
+from app.database.base import get_db, SessionLocal
+from app.database.session import get_async_db_session, get_async_db_transaction, get_database_manager
 from app.services.redis_client import RedisClient
 from app.services.kafka_client import KafkaClient
 from app.services.rabbitmq_client import RabbitMQClient
-from app.core.llm.factory import get_llm_client
 from app.core.memory.base import MemoryInterface
-from app.core.memory.redis_memory import RedisMemory
-from app.core.memory.in_memory import InMemoryStore
+from app.core.llm.factory import get_llm_client
+from app.services.chat_service import ChatService
+from app.services.conversation_service import ConversationService
+from app.database.repositories import (
+    UserRepository, 
+    ChatSessionRepository, 
+    ChatMessageRepository, 
+    CompletionRepository,
+    ApiKeyRepository,
+    TaskResultRepository
+)
+
+T = TypeVar("T")
 
 
-# Global service instances
-_redis_client: RedisClient | None = None
-_kafka_client: KafkaClient | None = None
-_rabbitmq_client: RabbitMQClient | None = None
-
-
-@lru_cache()
-def get_redis_client() -> RedisClient:
-    """Get Redis client instance."""
-    global _redis_client
-    if _redis_client is None:
-        _redis_client = RedisClient()
-    return _redis_client
-
-
-@lru_cache()
-def get_kafka_client() -> KafkaClient:
-    """Get Kafka client instance."""
-    global _kafka_client
-    if _kafka_client is None:
-        _kafka_client = KafkaClient()
-    return _kafka_client
-
-
-@lru_cache()
-def get_rabbitmq_client() -> RabbitMQClient:
-    """Get RabbitMQ client instance."""
-    global _rabbitmq_client
-    if _rabbitmq_client is None:
-        _rabbitmq_client = RabbitMQClient()
-    return _rabbitmq_client
-
-
-def get_memory_store(
-    settings: Settings = Depends(get_settings),
-    redis_client: RedisClient = Depends(get_redis_client)
-) -> MemoryInterface:
-    """Get memory store implementation."""
-    try:
-        # Try Redis first
-        if redis_client:
-            return RedisMemory(redis_client)
-    except Exception:
-        pass
+# Request-scoped dependency injection
+async def get_scoped_container(request: Request) -> DIContainer:
+    """Get request-scoped DI container."""
+    if not hasattr(request.state, "container_scope"):
+        container = get_container()
+        request.state.container_scope = container.scope()
+        request.state.scoped_container = await request.state.container_scope.__aenter__()
     
-    # Fallback to in-memory
-    return InMemoryStore()
+    return request.state.scoped_container
+
+
+async def get_service(service_type: Type[T], container: DIContainer = Depends(get_scoped_container)) -> T:
+    """Generic service resolver."""
+    return await container.get_service(service_type)
+
+
+# Service-specific dependency functions
+async def get_redis_client(container: DIContainer = Depends(get_scoped_container)) -> RedisClient:
+    """Get Redis client instance."""
+    return await container.get_service(RedisClient)
+
+
+async def get_kafka_client(container: DIContainer = Depends(get_scoped_container)) -> KafkaClient:
+    """Get Kafka client instance."""
+    return await container.get_service(KafkaClient)
+
+
+async def get_rabbitmq_client(container: DIContainer = Depends(get_scoped_container)) -> RabbitMQClient:
+    """Get RabbitMQ client instance."""
+    return await container.get_service(RabbitMQClient)
+
+
+async def get_memory_store(container: DIContainer = Depends(get_scoped_container)) -> MemoryInterface:
+    """Get memory store implementation."""
+    return await container.get_service(MemoryInterface)
 
 
 def get_llm_service(settings: Settings = Depends(get_settings)):
     """Get LLM service instance."""
     return get_llm_client(settings.llm_provider, settings)
+
+
+async def get_chat_service(container: DIContainer = Depends(get_scoped_container)) -> ChatService:
+    """Get Chat service instance."""
+    return await container.get_service(ChatService)
+
+
+async def get_conversation_service(container: DIContainer = Depends(get_scoped_container)) -> ConversationService:
+    """Get Conversation service instance."""
+    return await container.get_service(ConversationService)
+
+
+# Repository dependencies
+async def get_user_repository(container: DIContainer = Depends(get_scoped_container)) -> UserRepository:
+    """Get User repository."""
+    return await container.get_service(UserRepository)
+
+
+async def get_chat_session_repository(container: DIContainer = Depends(get_scoped_container)) -> ChatSessionRepository:
+    """Get ChatSession repository."""
+    return await container.get_service(ChatSessionRepository)
+
+
+async def get_chat_message_repository(container: DIContainer = Depends(get_scoped_container)) -> ChatMessageRepository:
+    """Get ChatMessage repository."""
+    return await container.get_service(ChatMessageRepository)
+
+
+async def get_completion_repository(container: DIContainer = Depends(get_scoped_container)) -> CompletionRepository:
+    """Get Completion repository."""
+    return await container.get_service(CompletionRepository)
+
+
+async def get_api_key_repository(container: DIContainer = Depends(get_scoped_container)) -> ApiKeyRepository:
+    """Get ApiKey repository."""
+    return await container.get_service(ApiKeyRepository)
+
+
+async def get_task_result_repository(container: DIContainer = Depends(get_scoped_container)) -> TaskResultRepository:
+    """Get TaskResult repository."""
+    return await container.get_service(TaskResultRepository)
+
+
+# Database health check
+async def check_database_health(db: Session = Depends(get_db)) -> bool:
+    """Check database connectivity."""
+    try:
+        # Simple query to test database connection
+        db.execute("SELECT 1")
+        return True
+    except Exception:
+        return False
 
 
 # Health check dependencies
@@ -115,7 +170,8 @@ def validate_message_content(message: str, settings: Settings = Depends(get_sett
             detail="Message cannot be empty"
         )
     
-    if len(message) > settings.get("max_message_length", 2000):
+    max_length = getattr(settings, "max_message_length", 2000)
+    if len(message) > max_length:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Message too long"
@@ -124,36 +180,49 @@ def validate_message_content(message: str, settings: Settings = Depends(get_sett
     return message.strip()
 
 
+# Request cleanup middleware
+async def cleanup_request_scope(request: Request):
+    """Cleanup request-scoped services."""
+    if hasattr(request.state, "container_scope"):
+        try:
+            await request.state.container_scope.__aexit__(None, None, None)
+        except Exception as e:
+            # Log but don't fail the request
+            print(f"Error cleaning up request scope: {e}")
+
+
 # Cleanup function for startup/shutdown
 async def cleanup_services():
-    """Clean up service connections."""
-    global _redis_client, _kafka_client, _rabbitmq_client
+    """Clean up all services in DI container."""
+    from app.database.session import cleanup_database
     
-    if _redis_client:
-        await _redis_client.disconnect()
-        _redis_client = None
+    # Cleanup DI container first
+    container = get_container()
+    await container.dispose()
     
-    if _kafka_client:
-        await _kafka_client.disconnect()
-        _kafka_client = None
-    
-    if _rabbitmq_client:
-        await _rabbitmq_client.disconnect()
-        _rabbitmq_client = None
+    # Cleanup database connections
+    await cleanup_database()
 
 
 # Initialize services
 async def initialize_services():
-    """Initialize all service connections."""
-    redis_client = get_redis_client()
-    kafka_client = get_kafka_client()
-    rabbitmq_client = get_rabbitmq_client()
+    """Initialize all service connections via DI container."""
+    from app.database.session import initialize_database
     
+    # Initialize async database first
     try:
-        await redis_client.connect()
-        await kafka_client.connect()
-        await rabbitmq_client.connect()
+        await initialize_database()
+    except Exception as e:
+        print(f"Warning: Database initialization failed: {e}")
+        # Continue with other services even if database fails
+    
+    # Pre-initialize singleton services
+    container = get_container()
+    try:
+        await container.get_service(RedisClient)
+        await container.get_service(KafkaClient) 
+        await container.get_service(RabbitMQClient)
     except Exception as e:
         # Clean up on failure
-        await cleanup_services()
+        await container.dispose()
         raise e

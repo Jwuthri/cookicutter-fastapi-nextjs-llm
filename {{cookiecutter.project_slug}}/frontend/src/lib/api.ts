@@ -33,9 +33,11 @@ export interface HealthResponse {
 
 class ApiClient {
   private baseUrl: string
+  private token?: string | null
 
-  constructor(baseUrl: string = API_BASE_URL) {
+  constructor(baseUrl: string = API_BASE_URL, token?: string | null) {
     this.baseUrl = baseUrl.replace(/\/$/, '') // Remove trailing slash
+    this.token = token
   }
 
   private async request<T>(
@@ -44,11 +46,18 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
     
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
+    }
+
+    // Add authentication header if token is available
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`
+    }
+    
     const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       ...options,
     }
 
@@ -84,28 +93,28 @@ class ApiClient {
   }
 
   async sendMessage(request: ChatRequest): Promise<ChatResponse> {
-    return this.request<ChatResponse>('/api/chat', {
+    return this.request<ChatResponse>('/api/v1/chat/', {
       method: 'POST',
       body: JSON.stringify(request),
     })
   }
 
   async getSession(sessionId: string): Promise<ChatSession> {
-    return this.request<ChatSession>(`/api/chat/sessions/${sessionId}`)
+    return this.request<ChatSession>(`/api/v1/chat/sessions/${sessionId}`)
   }
 
   async listSessions(): Promise<{ sessions: Array<{ session_id: string; message_count: number; last_activity: string | null }> }> {
-    return this.request<{ sessions: Array<{ session_id: string; message_count: number; last_activity: string | null }> }>('/api/chat/sessions')
+    return this.request<{ sessions: Array<{ session_id: string; message_count: number; last_activity: string | null }> }>('/api/v1/chat/sessions')
   }
 
   async deleteSession(sessionId: string): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/api/chat/sessions/${sessionId}`, {
+    return this.request<{ message: string }>(`/api/v1/chat/sessions/${sessionId}`, {
       method: 'DELETE',
     })
   }
 
   async healthCheck(): Promise<HealthResponse> {
-    return this.request<HealthResponse>('/health')
+    return this.request<HealthResponse>('/api/v1/health/')
   }
 
   async getRoot(): Promise<{
@@ -123,7 +132,13 @@ class ApiClient {
   }
 }
 
+// Default unauthenticated client (for public endpoints)
 export const apiClient = new ApiClient()
+
+// Factory function to create authenticated API client
+export const createApiClient = (token?: string | null): ApiClient => {
+  return new ApiClient(API_BASE_URL, token)
+}
 
 // WebSocket client for real-time communication
 {% if cookiecutter.use_websockets == "yes" %}

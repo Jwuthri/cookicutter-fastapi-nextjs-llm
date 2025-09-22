@@ -11,7 +11,9 @@ from app.core.memory.base import MemoryInterface
 from app.models.chat import ChatMessage, ChatResponse
 from app.config import Settings
 from app.exceptions import ValidationError, LLMError
-from loguru import logger
+from ..utils.logging import get_logger
+
+logger = get_logger("chat_service")
 
 
 class ChatService:

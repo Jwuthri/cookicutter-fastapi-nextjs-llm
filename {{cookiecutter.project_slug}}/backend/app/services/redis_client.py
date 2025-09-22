@@ -7,7 +7,9 @@ import os
 from typing import Any, Optional, Dict
 from redis import Redis
 from redis.asyncio import Redis as AsyncRedis
-from loguru import logger
+from ..utils.logging import get_logger
+
+logger = get_logger("redis_client")
 
 
 class RedisClient:
@@ -17,6 +19,18 @@ class RedisClient:
         self.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
         self.redis: Optional[AsyncRedis] = None
         self.sync_redis: Optional[Redis] = None
+        self._initialized = False
+        
+    async def initialize(self):
+        """Initialize the Redis client (called by DI container)."""
+        if not self._initialized:
+            await self.connect()
+            self._initialized = True
+        
+    async def cleanup(self):
+        """Cleanup resources (called by DI container)."""
+        await self.disconnect()
+        self._initialized = False
         
     async def connect(self):
         """Initialize Redis connection."""

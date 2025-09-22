@@ -129,6 +129,10 @@ services:
       # Redis configuration
       REDIS_URL: redis://redis:6379/0
       
+      # Celery configuration
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      
       # Kafka configuration
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       
@@ -153,6 +157,172 @@ services:
       - backend_data:/app/data
       {% endif %}
     restart: unless-stopped
+
+  # Celery Worker - General Tasks
+  celery-worker-general:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: {{cookiecutter.project_slug}}-celery-general
+    depends_on:
+      redis:
+        condition: service_healthy
+      {% if cookiecutter.include_database == "postgresql" %}
+      postgres:
+        condition: service_healthy
+      {% endif %}
+    command: celery -A app.core.celery_app:celery_app worker --queues=general --concurrency=2 --loglevel=info --hostname=general@%h
+    environment:
+      # Same environment as backend
+      {% if cookiecutter.include_database == "postgresql" %}
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/{{cookiecutter.project_slug}}
+      {% elif cookiecutter.include_database == "sqlite" %}
+      DATABASE_URL: sqlite:///./data/{{cookiecutter.project_slug}}.db
+      {% endif %}
+      
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      
+      # LLM configuration
+      {% if cookiecutter.llm_provider == "openai" %}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-your-openai-api-key-here}
+      {% elif cookiecutter.llm_provider == "anthropic" %}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-your-anthropic-api-key-here}
+      {% endif %}
+      
+      ENVIRONMENT: development
+      LOG_LEVEL: info
+    volumes:
+      - ./backend:/app
+      {% if cookiecutter.include_database == "sqlite" %}
+      - backend_data:/app/data
+      {% endif %}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.core.celery_app:celery_app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Worker - Chat Tasks
+  celery-worker-chat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: {{cookiecutter.project_slug}}-celery-chat
+    depends_on:
+      redis:
+        condition: service_healthy
+      {% if cookiecutter.include_database == "postgresql" %}
+      postgres:
+        condition: service_healthy
+      {% endif %}
+    command: celery -A app.core.celery_app:celery_app worker --queues=chat --concurrency=3 --loglevel=info --hostname=chat@%h
+    environment:
+      # Same environment as backend
+      {% if cookiecutter.include_database == "postgresql" %}
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/{{cookiecutter.project_slug}}
+      {% elif cookiecutter.include_database == "sqlite" %}
+      DATABASE_URL: sqlite:///./data/{{cookiecutter.project_slug}}.db
+      {% endif %}
+      
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      
+      # LLM configuration
+      {% if cookiecutter.llm_provider == "openai" %}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-your-openai-api-key-here}
+      {% elif cookiecutter.llm_provider == "anthropic" %}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-your-anthropic-api-key-here}
+      {% endif %}
+      
+      ENVIRONMENT: development
+      LOG_LEVEL: info
+    volumes:
+      - ./backend:/app
+      {% if cookiecutter.include_database == "sqlite" %}
+      - backend_data:/app/data
+      {% endif %}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.core.celery_app:celery_app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Worker - LLM Tasks (CPU intensive)
+  celery-worker-llm:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: {{cookiecutter.project_slug}}-celery-llm
+    depends_on:
+      redis:
+        condition: service_healthy
+      {% if cookiecutter.include_database == "postgresql" %}
+      postgres:
+        condition: service_healthy
+      {% endif %}
+    command: celery -A app.core.celery_app:celery_app worker --queues=llm --concurrency=2 --loglevel=info --hostname=llm@%h --pool=prefork
+    environment:
+      # Same environment as backend
+      {% if cookiecutter.include_database == "postgresql" %}
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/{{cookiecutter.project_slug}}
+      {% elif cookiecutter.include_database == "sqlite" %}
+      DATABASE_URL: sqlite:///./data/{{cookiecutter.project_slug}}.db
+      {% endif %}
+      
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      
+      # LLM configuration
+      {% if cookiecutter.llm_provider == "openai" %}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-your-openai-api-key-here}
+      {% elif cookiecutter.llm_provider == "anthropic" %}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-your-anthropic-api-key-here}
+      {% endif %}
+      
+      ENVIRONMENT: development
+      LOG_LEVEL: info
+    volumes:
+      - ./backend:/app
+      {% if cookiecutter.include_database == "sqlite" %}
+      - backend_data:/app/data
+      {% endif %}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.core.celery_app:celery_app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Flower - Monitoring (optional)
+  celery-flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: {{cookiecutter.project_slug}}-flower
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A app.core.celery_app:celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+    restart: unless-stopped
+    profiles:
+      - monitoring
 
   # Next.js Frontend
   frontend:

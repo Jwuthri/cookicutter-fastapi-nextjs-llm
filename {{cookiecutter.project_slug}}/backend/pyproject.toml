@@ -47,10 +47,16 @@ dependencies = [
     # Database support (conditional)
     {% if cookiecutter.include_database == "postgresql" %}
     "asyncpg>=0.29.0",
+    "psycopg2-binary>=2.9.7",  # For sync operations
     "sqlalchemy[asyncio]>=2.0.23",
     "alembic>=1.13.0",
     {% elif cookiecutter.include_database == "sqlite" %}
     "aiosqlite>=0.19.0", 
+    "sqlalchemy[asyncio]>=2.0.23",
+    "alembic>=1.13.0",
+    {% else %}
+    # Always include basic async database support
+    "aiosqlite>=0.19.0",
     "sqlalchemy[asyncio]>=2.0.23",
     "alembic>=1.13.0",
     {% endif %}
@@ -84,9 +90,18 @@ dependencies = [
     # HTTP client
     "httpx>=0.25.2",
     
+    # Authentication and JWT
+    "pyjwt>=2.8.0",
+    "cryptography>=41.0.0",
+    "python-jose[cryptography]>=3.3.0",
+    
     # Logging and monitoring
-    "loguru>=0.7.2",
+    "rich>=13.7.0",
+    "python-json-logger>=2.0.7",
     "prometheus-client>=0.19.0",
+    
+    # CLI support
+    "click>=8.1.7",
     
     # Async utilities
     "asyncio-throttle>=1.0.2",
@@ -121,6 +136,9 @@ test = [
     "pytest-cov>=4.1.0",
     "httpx>=0.25.2",
 ]
+
+[project.scripts]
+{{cookiecutter.project_slug}} = "app.cli.main:cli"
 
 [project.urls]
 Homepage = "https://github.com/{{cookiecutter.author_name}}/{{cookiecutter.project_slug}}"

@@ -8,17 +8,20 @@ A modern, responsive Next.js frontend for AI-powered chat applications with real
 
 ### Core Features
 - **💬 Interactive Chat Interface**: Beautiful, responsive chat UI with message history
+- **🔐 Authentication**: Clerk.com integration with Google social login support
 - **🚀 Real-time Messaging**: {% if cookiecutter.use_websockets == "yes" %}WebSocket support for instant communication{% else %}HTTP-based messaging with optimized polling{% endif %}
 - **🎨 Modern UI Components**: Custom-built components with consistent design system
 - **📱 Responsive Design**: Mobile-first approach that works on all devices  
-- **⚡ Fast Performance**: Optimized with Next.js 13+ App Router for lightning-fast loading
+- **⚡ Fast Performance**: Optimized with Next.js 14+ App Router for lightning-fast loading
 - **🔄 State Management**: Efficient context-based state management for chat sessions
 
 ### User Experience
+- **👤 User Authentication**: Secure sign-in/sign-up with Google social login
+- **🔒 Protected Routes**: Automatic redirection for unauthenticated users
 - **💭 Typing Indicators**: Visual feedback during AI response generation
 - **🔍 Message Search**: Find previous conversations quickly
 - **💾 Session Persistence**: Automatic session saving and restoration
-- **🌙 Theme Support**: Light/dark mode with system preference detection
+- **🌙 Dark Theme**: Modern dark gradient theme with beautiful UI
 - **♿ Accessibility**: WCAG compliant with keyboard navigation support
 - **📧 Toast Notifications**: User-friendly error and success messages
 
@@ -49,9 +52,7 @@ A modern, responsive Next.js frontend for AI-powered chat applications with real
 │   │   │   └── ...
 │   │   ├── chat/             # Chat-specific components
 │   │   │   ├── chat-container.tsx
-│   │   │   ├── message-list.tsx
-│   │   │   ├── message-item.tsx
-│   │   │   └── message-input.tsx
+│   │   │   └── message-item.tsx
 │   │   ├── layout/           # Layout components
 │   │   └── providers/        # Context providers
 │   │
@@ -73,11 +74,8 @@ A modern, responsive Next.js frontend for AI-powered chat applications with real
 ### Key Components
 
 **Chat Components**:
-- `ChatContainer`: Main chat interface wrapper
-- `MessageList`: Scrollable message history
-- `MessageItem`: Individual message display with role-based styling
-- `MessageInput`: User input with send functionality
-- `TypingIndicator`: AI response loading animation
+- `ChatContainer`: Complete chat interface with header, messages, and input
+- `MessageItem`: Individual message display with role-based styling and animations
 
 **UI Components**:
 - `Button`: Customizable button with variants
@@ -115,6 +113,9 @@ pnpm install
 Create a `.env.local` file:
 
 ```bash
+# Clerk Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your-clerk-publishable-key-here
+
 # Backend API Configuration
 NEXT_PUBLIC_API_URL=http://localhost:{{cookiecutter.backend_port}}
 NEXT_PUBLIC_WS_URL={% if cookiecutter.use_websockets == "yes" %}ws://localhost:{{cookiecutter.backend_port}}{% else %}# WebSocket not enabled{% endif %}
@@ -483,6 +484,10 @@ npm run build && npm run export
 
 **Required**:
 ```bash
+# Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_your-clerk-publishable-key
+
+# Backend API
 NEXT_PUBLIC_API_URL=https://your-backend-api.com
 NEXT_PUBLIC_WS_URL=wss://your-backend-api.com  # if WebSocket enabled
 ```

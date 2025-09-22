@@ -6,38 +6,29 @@ from fastapi import Depends, HTTPException, status, Header
 from typing import Optional
 
 from app.config import Settings, get_settings
-from app.dependencies import get_redis_client, get_memory_store, get_llm_service
+from app.dependencies import get_redis_client, get_memory_store, get_llm_service, get_chat_service, get_conversation_service
 from app.services.chat_service import ChatService
 from app.services.conversation_service import ConversationService
 from app.core.security.rate_limit import RateLimiter
 from app.core.memory.base import MemoryInterface
 
 
-def get_chat_service(
-    memory_store: MemoryInterface = Depends(get_memory_store),
-    llm_service = Depends(get_llm_service),
-    settings: Settings = Depends(get_settings)
+# Use DI container services directly
+async def get_chat_service_dep(
+    chat_service: ChatService = Depends(get_chat_service)
 ) -> ChatService:
-    """Get chat service instance."""
-    return ChatService(
-        memory_store=memory_store,
-        llm_service=llm_service,
-        settings=settings
-    )
+    """Get chat service instance from DI container."""
+    return chat_service
 
 
-def get_conversation_service(
-    memory_store: MemoryInterface = Depends(get_memory_store),
-    settings: Settings = Depends(get_settings)
+async def get_conversation_service_dep(
+    conversation_service: ConversationService = Depends(get_conversation_service)
 ) -> ConversationService:
-    """Get conversation service instance."""
-    return ConversationService(
-        memory_store=memory_store,
-        settings=settings
-    )
+    """Get conversation service instance from DI container."""
+    return conversation_service
 
 
-def get_rate_limiter(
+async def get_rate_limiter(
     settings: Settings = Depends(get_settings),
     redis_client = Depends(get_redis_client)
 ) -> RateLimiter:

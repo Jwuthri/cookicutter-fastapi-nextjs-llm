@@ -10,9 +10,28 @@ from fastapi import Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from loguru import logger
+from .utils.logging import get_logger
+
+logger = get_logger("middleware")
 
 from app.config import get_settings
+
+
+class RequestScopeMiddleware(BaseHTTPMiddleware):
+    """Middleware for managing request-scoped dependency injection."""
+    
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Handle request-scoped DI cleanup."""
+        try:
+            response = await call_next(request)
+            return response
+        finally:
+            # Cleanup request-scoped services
+            if hasattr(request.state, "container_scope"):
+                try:
+                    await request.state.container_scope.__aexit__(None, None, None)
+                except Exception as e:
+                    logger.warning(f"Error cleaning up request scope: {e}")
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -172,6 +191,9 @@ def setup_middleware(app):
             RateLimitMiddleware,
             requests_per_minute=settings.rate_limit_requests
         )
+    
+    # Request-scoped dependency injection cleanup
+    app.add_middleware(RequestScopeMiddleware)
     
     # Request logging (last, so it captures everything)
     app.add_middleware(LoggingMiddleware)

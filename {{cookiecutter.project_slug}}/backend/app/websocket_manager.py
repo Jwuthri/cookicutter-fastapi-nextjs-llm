@@ -6,7 +6,9 @@ from fastapi import WebSocket
 from typing import Dict, List, Set
 import json
 import asyncio
-from loguru import logger
+from .utils.logging import get_logger
+
+logger = get_logger("websocket_manager")
 
 
 class WebSocketManager:

@@ -4,7 +4,7 @@ Base models for {{cookiecutter.project_name}}.
 
 from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional, Dict, Any, Literal
+from typing import Optional, Dict, Any, Literal, List, Union
 
 
 class HealthResponse(BaseModel):
@@ -91,5 +91,86 @@ class APIInfo(BaseModel):
                 "description": "{{cookiecutter.description}}",
                 "docs_url": "/docs",
                 "health_url": "/health"
+            }
+        }
+
+
+class ErrorDetail(BaseModel):
+    """Individual error detail."""
+    type: str = Field(..., description="Error type identifier")
+    message: str = Field(..., description="Human-readable error message")
+    field: Optional[str] = Field(None, description="Field that caused the error (if applicable)")
+    code: Optional[str] = Field(None, description="Error code for programmatic handling")
+
+
+class ValidationErrorDetail(ErrorDetail):
+    """Validation error detail."""
+    input_value: Optional[Any] = Field(None, description="The invalid input value")
+    constraints: Optional[Dict[str, Any]] = Field(None, description="Validation constraints that failed")
+
+
+class EnhancedErrorResponse(BaseModel):
+    """Enhanced standardized error response."""
+    error: str = Field(..., description="Error type/category")
+    message: str = Field(..., description="Main error message")
+    details: List[ErrorDetail] = Field(default_factory=list, description="Detailed error information")
+    request_id: Optional[str] = Field(None, description="Request identifier for tracing")
+    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat(), description="Error timestamp")
+    path: Optional[str] = Field(None, description="Request path that caused the error")
+    method: Optional[str] = Field(None, description="HTTP method that caused the error")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "error": "ValidationError",
+                "message": "Input validation failed",
+                "details": [
+                    {
+                        "type": "value_error",
+                        "message": "Password must be at least 8 characters long",
+                        "field": "password",
+                        "code": "PASSWORD_TOO_SHORT"
+                    }
+                ],
+                "request_id": "req_123456789",
+                "timestamp": "2024-01-01T12:00:00.000Z",
+                "path": "/api/v1/auth/register",
+                "method": "POST"
+            }
+        }
+
+
+class SuccessResponse(BaseModel):
+    """Standardized success response."""
+    success: bool = Field(True, description="Operation success status")
+    message: str = Field(..., description="Success message")
+    data: Optional[Any] = Field(None, description="Response data")
+    request_id: Optional[str] = Field(None, description="Request identifier for tracing")
+    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat(), description="Response timestamp")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "message": "Operation completed successfully",
+                "data": {"id": "123", "status": "active"},
+                "request_id": "req_123456789",
+                "timestamp": "2024-01-01T12:00:00.000Z"
+            }
+        }
+
+
+class StatusResponse(BaseModel):
+    """Status operation response."""
+    status: str = Field(..., description="Operation status")
+    message: str = Field(..., description="Status message")
+    data: Optional[Dict[str, Any]] = Field(None, description="Additional status data")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": "processing",
+                "message": "Task is being processed",
+                "data": {"progress": 75, "estimated_completion": "2024-01-01T12:05:00.000Z"}
             }
         }

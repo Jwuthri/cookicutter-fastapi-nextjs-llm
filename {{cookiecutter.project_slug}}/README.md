@@ -34,6 +34,7 @@ A production-ready AI agent application featuring unified access to 500+ languag
 - **FastAPI Backend** with async/await support
 - **Next.js Frontend** with App Router and TypeScript
 - **WebSocket Support** for real-time communication
+- **Background Task Processing** with Celery workers and Redis
 - **Docker Compose** setup for development and production
 - **Microservices Ready** with Redis, Kafka, RabbitMQ support
 
@@ -229,6 +230,41 @@ POST /api/v1/search
 DELETE /api/v1/chat/sessions/{session_id}
 ```
 
+### **Background Tasks**
+```bash
+# Trigger asynchronous LLM completion
+POST /api/v1/tasks/llm/completion
+{
+  "prompt": "Explain quantum computing",
+  "model": "gpt-4",
+  "delay_seconds": 10
+}
+
+# Process chat message asynchronously
+POST /api/v1/tasks/chat/process
+{
+  "message": "Hello",
+  "session_id": "uuid-here"
+}
+
+# Get task status
+GET /api/v1/tasks/{task_id}
+
+# List all active tasks
+GET /api/v1/tasks
+
+# Trigger system health check
+POST /api/v1/tasks/system/health-check
+
+# Send notification
+POST /api/v1/tasks/notifications
+{
+  "recipient": "user@example.com",
+  "message": "Task completed",
+  "notification_type": "success"
+}
+```
+
 ---
 
 ## 🔧 **Configuration**
@@ -268,6 +304,11 @@ WEBSOCKET_ENABLED=true
 {% else %}
 WEBSOCKET_ENABLED=false  
 {% endif %}
+
+# Celery Background Tasks
+CELERY_BROKER_URL=redis://localhost:6379/1
+CELERY_RESULT_BACKEND=redis://localhost:6379/1
+CELERY_TASK_ALWAYS_EAGER=false  # Set to true for testing
 ```
 
 ### **Frontend Settings** (`frontend/.env.local`)
@@ -297,6 +338,14 @@ docker-compose -f docker-compose.prod.yml up -d
 cd backend
 uv pip install -e .
 gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
+
+# Start Celery workers (in separate terminals)
+celery -A app.core.celery_app:celery_app worker --queues=general --concurrency=2
+celery -A app.core.celery_app:celery_app worker --queues=chat --concurrency=3  
+celery -A app.core.celery_app:celery_app worker --queues=llm --concurrency=2
+
+# Optional: Start Celery Flower for monitoring
+celery -A app.core.celery_app:celery_app flower --port=5555
 
 # Frontend
 cd frontend  
@@ -329,6 +378,7 @@ npm start
 │   │   │   └── 📁 security/   # Auth & rate limiting
 │   │   ├── 📁 models/         # Pydantic models
 │   │   ├── 📁 services/       # Business services
+│   │   ├── 📁 tasks/          # Celery background tasks
 │   │   └── 📁 utils/          # Utilities
 │   ├── 📁 docker/             # Docker configurations
 │   ├── 📁 scripts/            # Deployment scripts  

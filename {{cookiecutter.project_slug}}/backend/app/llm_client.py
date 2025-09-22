@@ -5,7 +5,9 @@ Supports multiple LLM providers based on cookiecutter configuration.
 
 import os
 from typing import List, Optional
-from loguru import logger
+from .utils.logging import get_logger
+
+logger = get_logger("llm_client")
 from .models import ChatMessage
 {% if cookiecutter.llm_provider == "openai" %}
 import openai

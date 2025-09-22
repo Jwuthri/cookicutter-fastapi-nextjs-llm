@@ -7,7 +7,9 @@ from typing import Optional, AsyncGenerator
 from app.core.llm.base import BaseLLMClient
 from app.models.completion import CompletionRequest
 from app.exceptions import ValidationError, LLMError
-from loguru import logger
+from ..utils.logging import get_logger
+
+logger = get_logger("completion_service")
 
 
 class CompletionService:

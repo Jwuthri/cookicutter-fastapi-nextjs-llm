@@ -10,7 +10,8 @@ from app.config import Settings, get_settings
 from app.dependencies import (
     check_redis_health,
     check_kafka_health,
-    check_rabbitmq_health
+    check_rabbitmq_health,
+    check_database_health
 )
 from app.models.base import HealthResponse
 
@@ -20,6 +21,7 @@ router = APIRouter()
 @router.get("/", response_model=HealthResponse)
 async def health_check(
     settings: Settings = Depends(get_settings),
+    database_health: bool = Depends(check_database_health),
     redis_health: bool = Depends(check_redis_health),
     kafka_health: bool = Depends(check_kafka_health),
     rabbitmq_health: bool = Depends(check_rabbitmq_health)
@@ -28,13 +30,14 @@ async def health_check(
     Comprehensive health check for all services.
     """
     services_status = {
-        "redis": "healthy" if redis_health else "unhealthy",
+        "database": "healthy" if database_health else "unhealthy",
+        "redis": "healthy" if redis_health else "unhealthy", 
         "kafka": "healthy" if kafka_health else "unhealthy",
         "rabbitmq": "healthy" if rabbitmq_health else "unhealthy"
     }
     
     # Overall status - healthy only if all services are healthy
-    overall_healthy = all([redis_health, kafka_health, rabbitmq_health])
+    overall_healthy = all([database_health, redis_health, kafka_health, rabbitmq_health])
     
     return HealthResponse(
         status="healthy" if overall_healthy else "unhealthy",
@@ -82,8 +85,21 @@ async def rabbitmq_health_check(
     }
 
 
+@router.get("/database")
+async def database_health_check(
+    database_health: bool = Depends(check_database_health)
+) -> Dict[str, Any]:
+    """Check database service health."""
+    return {
+        "service": "database",
+        "status": "healthy" if database_health else "unhealthy",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
 @router.get("/ready")
 async def readiness_check(
+    database_health: bool = Depends(check_database_health),
     redis_health: bool = Depends(check_redis_health),
     kafka_health: bool = Depends(check_kafka_health),
     rabbitmq_health: bool = Depends(check_rabbitmq_health)
@@ -92,12 +108,13 @@ async def readiness_check(
     Readiness check - returns 200 only if all critical services are available.
     Used by Kubernetes readiness probes.
     """
-    ready = all([redis_health, kafka_health, rabbitmq_health])
+    ready = all([database_health, redis_health, kafka_health, rabbitmq_health])
     
     response = {
         "ready": ready,
         "timestamp": datetime.now().isoformat(),
         "services": {
+            "database": database_health,
             "redis": redis_health,
             "kafka": kafka_health,
             "rabbitmq": rabbitmq_health

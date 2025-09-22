@@ -7,6 +7,15 @@ export interface Message {
   metadata?: Record<string, any>
 }
 
+export interface ChatMessage {
+  id: string
+  content: string
+  role: 'user' | 'assistant' | 'system'
+  timestamp: string
+  error?: boolean
+  metadata?: Record<string, any>
+}
+
 export interface ChatSession {
   session_id: string
   messages: Message[]

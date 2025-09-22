@@ -24,7 +24,8 @@ This cookiecutter template generates a complete, production-ready AI agent appli
 
 ### 🏗️ **Modern Architecture**  
 - **FastAPI Backend** - Python 3.11+ with async/await, type hints, auto-documentation
-- **Next.js Frontend** - React with App Router, TypeScript, Tailwind CSS
+- **Next.js Frontend** - React with App Router, TypeScript, modern dark theme
+- **Authentication** - Clerk.com integration with Google social login
 - **Vector Databases** - Pinecone, Weaviate, Qdrant, or ChromaDB for AI memory
 - **WebSocket Support** - Real-time communication for chat interfaces
 - **Docker Ready** - Complete containerization with Docker Compose
@@ -54,7 +55,7 @@ conda install cookiecutter
 
 ### 2. **Generate Your Project**
 ```bash
-cookiecutter https://github.com/yourusername/cookiecutter-fastapi-nextjs-llm
+cookiecutter https://github.com/julienwuthrich/cookiecutter-fastapi-nextjs-llm
 ```
 
 ### 3. **Answer the Prompts**
@@ -113,7 +114,7 @@ This template is perfect for building:
 
 ### 🤖 **AI Chatbots & Assistants**
 - Customer support bots with memory
-- Code review assistants  
+- Personal AI assistants
 - Writing and editing tools
 - Research and analysis helpers
 
@@ -232,9 +233,10 @@ The generated project supports easy integration with:
 - Supabase, PlanetScale (cloud)
 
 ### **Authentication**
-- JWT tokens (built-in)
+- Clerk.com (built-in with Google social login)
+- JWT token verification (built-in)
 - OAuth 2.0, Auth0 (add manually)
-- Firebase Auth, Clerk (third-party)
+- Firebase Auth (third-party)
 
 ### **Deployment**
 - Docker + Docker Compose (built-in)
@@ -280,7 +282,7 @@ We welcome contributions! Here's how:
 
 ### **Development Setup**
 ```bash
-git clone https://github.com/yourusername/cookiecutter-fastapi-nextjs-llm
+git clone https://github.com/julienwuthrich/cookiecutter-fastapi-nextjs-llm
 cd cookiecutter-fastapi-nextjs-llm
 
 # Test the template
@@ -312,7 +314,7 @@ docker-compose up -d
 
 If this template helps you build awesome AI applications, please give it a star! ⭐
 
-[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/cookiecutter-fastapi-nextjs-llm&type=Date)](https://star-history.com/#yourusername/cookiecutter-fastapi-nextjs-llm&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=julienwuthrich/cookiecutter-fastapi-nextjs-llm&type=Date)](https://star-history.com/#julienwuthrich/cookiecutter-fastapi-nextjs-llm&Date)
 
 ---
 
@@ -338,11 +340,11 @@ This template is licensed under the MIT License - see the [LICENSE](LICENSE) fil
 ## 🚀 **Ready to Build Your AI Agent App?**
 
 ```bash
-cookiecutter https://github.com/yourusername/cookiecutter-fastapi-nextjs-llm
+cookiecutter https://github.com/julienwuthrich/cookiecutter-fastapi-nextjs-llm
 ```
 
 **Generate. Code. Deploy. Scale.** 🎯
 
-[Get Started](https://github.com/yourusername/cookiecutter-fastapi-nextjs-llm/generate) • [View Examples](https://github.com/yourusername/cookiecutter-fastapi-nextjs-llm/wiki) • [Join Community](https://discord.gg/your-discord)
+[Get Started](https://github.com/julienwuthrich/cookiecutter-fastapi-nextjs-llm) • [View Examples](https://github.com/julienwuthrich/cookiecutter-fastapi-nextjs-llm/wiki) • [Issues](https://github.com/julienwuthrich/cookiecutter-fastapi-nextjs-llm/issues)
 
 </div>

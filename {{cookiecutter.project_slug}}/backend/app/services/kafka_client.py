@@ -8,7 +8,9 @@ import asyncio
 from typing import Any, Dict, Optional, Callable, List
 from aiokafka import AIOKafkaProducer, AIOKafkaConsumer
 from aiokafka.errors import KafkaError
-from loguru import logger
+from ..utils.logging import get_logger
+
+logger = get_logger("kafka_client")
 
 
 class KafkaClient:
@@ -19,6 +21,18 @@ class KafkaClient:
         self.producer: Optional[AIOKafkaProducer] = None
         self.consumers: Dict[str, AIOKafkaConsumer] = {}
         self.consumer_tasks: Dict[str, asyncio.Task] = {}
+        self._initialized = False
+        
+    async def initialize(self):
+        """Initialize the Kafka client (called by DI container)."""
+        if not self._initialized:
+            await self.connect()
+            self._initialized = True
+        
+    async def cleanup(self):
+        """Cleanup resources (called by DI container)."""
+        await self.disconnect()
+        self._initialized = False
         
     async def connect(self):
         """Initialize Kafka producer."""

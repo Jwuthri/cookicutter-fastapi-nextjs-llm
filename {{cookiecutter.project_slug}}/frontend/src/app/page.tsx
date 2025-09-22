@@ -1,71 +1,169 @@
 'use client'
 
+import React, { useState, useEffect } from 'react'
+import { SignInButton, UserButton, useUser } from '@clerk/nextjs'
+import { motion } from 'framer-motion'
+import { MessageCircle, Code, Zap } from 'lucide-react'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 
 export default function HomePage() {
+  const { isSignedIn, user } = useUser()
+  const [email, setEmail] = useState('')
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto px-4 py-16">
+    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-blue-950 to-purple-950">
+      {/* Navigation */}
+      <nav className="flex items-center justify-between px-6 py-4">
+        <div className="text-white font-bold tracking-wider">
+          {{cookiecutter.project_name}}
+        </div>
+        <div>
+          {isSignedIn ? (
+            <UserButton afterSignOutUrl="/" />
+          ) : (
+            <SignInButton mode="modal">
+              <button className="text-white/80 hover:text-white transition-colors">
+                Sign In
+              </button>
+            </SignInButton>
+          )}
+        </div>
+      </nav>
+
+      <div className="container mx-auto px-6 py-16">
+        {/* Hero Section */}
         <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-6">
-            {{cookiecutter.project_name}}
-          </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-            {{cookiecutter.description}}
-          </p>
-          <Link href="/chat">
-            <Button size="lg" className="px-8 py-3 text-lg">
-              Start Chatting
-            </Button>
-          </Link>
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-6xl md:text-7xl font-bold bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500 bg-clip-text text-transparent mb-6"
+          >
+            AI-Powered Chat
+          </motion.h1>
+          
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-xl text-white/80 mb-8 max-w-2xl mx-auto"
+          >
+            Chat with advanced AI. Get instant, intelligent responses to any question.
+          </motion.p>
+
+          {/* Terminal Demo */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="max-w-3xl mx-auto mb-12"
+          >
+            <div className="bg-gray-900/50 rounded-lg border border-gray-700/50 p-6 text-left">
+              <div className="flex items-center mb-4">
+                <div className="flex space-x-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                </div>
+                <div className="ml-4 text-white/60 text-sm font-mono">ai-chat-terminal</div>
+              </div>
+              <div className="font-mono text-sm space-y-2">
+                <div className="text-green-400">$ What's the best approach for learning machine learning? ✦</div>
+                <div className="text-blue-400">Analyzing query... Generating comprehensive response...</div>
+                <div className="text-yellow-400">💬 Response ready! Here's a detailed learning path for you. ■</div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Email Signup */}
+          {!isSignedIn && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              className="mb-16"
+            >
+              <h2 className="text-2xl font-bold text-white mb-4">Get Started</h2>
+              <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                  className="flex-1 px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                />
+                <SignInButton mode="modal">
+                  <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 hover:scale-105">
+                    Start Chatting →
+                  </button>
+                </SignInButton>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Action Button for Signed In Users */}
+          {isSignedIn && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+              className="mb-16"
+            >
+              <Link href="/chat">
+                <button className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 hover:scale-105 text-lg">
+                  Start Chatting →
+                </button>
+              </Link>
+            </motion.div>
+          )}
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          <Card className="p-6 text-center">
-            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
+        {/* Features */}
+        <motion.div 
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.8 }}
+          className="grid md:grid-cols-3 gap-8"
+        >
+          {/* Intelligent Conversations */}
+          <div className="text-center p-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <MessageCircle className="w-8 h-8 text-white" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">Real-time Chat</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Experience instant AI responses with WebSocket-powered real-time messaging
+            <h3 className="text-2xl font-bold text-white mb-4">Smart Conversations</h3>
+            <p className="text-white/70 leading-relaxed">
+              Engage in natural, intelligent conversations with advanced AI technology
             </p>
-          </Card>
+          </div>
 
-          <Card className="p-6 text-center">
-            <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+          {/* Instant Responses */}
+          <div className="text-center p-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Zap className="w-8 h-8 text-white" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">Lightning Fast</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Built with Redis caching and optimized for performance at scale
+            <h3 className="text-2xl font-bold text-white mb-4">Lightning Fast</h3>
+            <p className="text-white/70 leading-relaxed">
+              Get instant responses with real-time processing and optimized performance
             </p>
-          </Card>
+          </div>
 
-          <Card className="p-6 text-center">
-            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+          {/* Always Available */}
+          <div className="text-center p-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <Code className="w-8 h-8 text-white" />
             </div>
-            <h3 className="text-xl font-semibold mb-2">Enterprise Ready</h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Production-ready with Kafka, RabbitMQ, and comprehensive monitoring
+            <h3 className="text-2xl font-bold text-white mb-4">Always Available</h3>
+            <p className="text-white/70 leading-relaxed">
+              24/7 availability with persistent conversations and session history
             </p>
-          </Card>
-        </div>
-
-        <div className="mt-16 text-center">
-          <p className="text-gray-500 dark:text-gray-400">
-            Powered by FastAPI • Next.js • Redis • Kafka • RabbitMQ
-          </p>
-        </div>
+          </div>
+        </motion.div>
       </div>
+
+      {/* Footer */}
+      <footer className="text-center py-8 text-white/40 text-sm">
+        © 2025 {{cookiecutter.project_name}}. All rights reserved.
+      </footer>
     </div>
   )
 }

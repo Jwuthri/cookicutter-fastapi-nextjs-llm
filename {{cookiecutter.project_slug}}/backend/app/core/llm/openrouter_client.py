@@ -5,11 +5,11 @@ Unified access to 500+ models through Agno's powerful agent framework.
 
 from typing import List, Optional, Dict, Any, AsyncGenerator
 import os
-from loguru import logger
 
 from app.core.llm.base import BaseLLMClient
 from app.models.chat import ChatMessage
 from app.exceptions import LLMError
+from app.utils.logging import get_logger
 
 try:
     from agno.agent import Agent
@@ -19,6 +19,8 @@ except ImportError:
     Agent = None
     OpenRouter = None
     Message = None
+
+logger = get_logger("openrouter_client")
 
 
 class AgnoOpenRouterClient(BaseLLMClient):

@@ -1,8 +1,9 @@
 'use client'
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { Message } from '@/types/chat'
-import { apiClient } from '@/lib/api'
+import { createApiClient } from '@/lib/api'
 
 interface ChatState {
   messages: Message[]
@@ -68,12 +69,18 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
 
 export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [state, dispatch] = useReducer(chatReducer, initialState)
+  const { getToken } = useAuth()
 
   // Generate session ID on mount
   useEffect(() => {
     const sessionId = Math.random().toString(36).substring(2, 15)
     dispatch({ type: 'SET_SESSION_ID', payload: sessionId })
   }, [])
+
+  const getApiClient = async () => {
+    const token = await getToken()
+    return createApiClient(token)
+  }
 
   const sendMessage = async (content: string) => {
     if (!content.trim()) return
@@ -91,6 +98,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     dispatch({ type: 'SET_ERROR', payload: null })
 
     try {
+      const apiClient = await getApiClient()
       const response = await apiClient.sendMessage({
         message: content,
         session_id: state.sessionId || undefined,
@@ -141,6 +149,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     dispatch({ type: 'SET_ERROR', payload: null })
 
     try {
+      const apiClient = await getApiClient()
       const sessionData = await apiClient.getSession(sessionId)
       const messages: Message[] = sessionData.messages.map((msg: any) => ({
         id: msg.id,
