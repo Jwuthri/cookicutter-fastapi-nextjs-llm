@@ -189,24 +189,54 @@ class AgnoPineconeMemory(AgnoMemoryInterface):
     """Agno-based Pinecone memory implementation."""
     
     async def _create_agno_memory(self) -> Memory:
-        """Create Agno memory with Pinecone vector store."""
+        """Create Agno memory with Pinecone vector store (PERSISTENT)."""
         pinecone_config = {
             "api_key": self.settings.get_secret("pinecone_api_key"),
             "environment": self.settings.pinecone_environment,
             "index_name": self.settings.pinecone_index_name,
+            # Add namespace for isolation and persistence
+            "namespace": f"{getattr(self.settings, 'app_name', 'app')}_persistent"
         }
         
         if not pinecone_config["api_key"]:
             raise ConfigurationError("Pinecone API key not configured")
         
-        # Create Pinecone vector store
+        # Create Pinecone vector store with persistence settings
         vector_db = Pinecone(**pinecone_config)
         
-        # Create hybrid memory (chat + vector)
+        # Create persistent Redis storage for chat memory
+        try:
+            from agno.storage import RedisStorage
+            redis_storage = RedisStorage(
+                host=getattr(self.settings, 'redis_host', 'localhost'),
+                port=getattr(self.settings, 'redis_port', 6379),
+                db=getattr(self.settings, 'redis_db', 2),  # Separate DB for Agno
+                key_prefix="agno_pinecone:",
+                ttl=60 * 60 * 24 * 30  # 30 days retention
+            )
+            
+            chat_memory = ChatMemory(
+                storage=redis_storage,  # PERSISTENT REDIS BACKEND
+                max_messages=1000,
+                compress_when_full=True
+            )
+        except (ImportError, Exception) as e:
+            logger.warning(f"Redis storage not available, using non-persistent chat memory: {e}")
+            chat_memory = ChatMemory()
+        
+        # Create hybrid memory (PERSISTENT chat + vector)
         return HybridMemory(
-            chat_memory=ChatMemory(),
-            vector_memory=VectorMemory(vector_db=vector_db),
-            embed_model="text-embedding-3-small"  # Default embedding model
+            chat_memory=chat_memory,
+            vector_memory=VectorMemory(
+                vector_db=vector_db,
+                max_items=100000,      # Large capacity for persistence  
+                auto_save_interval=60  # Save every minute
+            ),
+            embed_model="text-embedding-3-small",
+            
+            # Persistence settings
+            sync_interval=120,         # Sync between memories every 2 minutes
+            auto_promote_threshold=0.8 # Promote important chat to vector storage
         )
 
 
@@ -288,18 +318,52 @@ class AgnoRedisMemory(AgnoMemoryInterface):
         self.redis_client = redis_client
     
     async def _create_agno_memory(self) -> Memory:
-        """Create Agno memory with Redis backend."""
-        # Use Redis for both chat and caching
-        redis_config = {
-            "url": self.settings.redis_url,
-        }
-        
-        # Create memory with Redis backend
-        memory = ChatMemory()
-        
-        # If Agno supports Redis backend, use it
-        if hasattr(memory, 'set_backend'):
-            memory.set_backend('redis', **redis_config)
+        """Create Agno memory with Redis backend (PERSISTENT)."""
+        try:
+            from agno.storage import RedisStorage
+            
+            # Create persistent Redis storage for Agno
+            redis_storage = RedisStorage(
+                url=self.settings.redis_url,
+                
+                # Persistence configuration  
+                key_prefix="agno_redis:",
+                ttl=60 * 60 * 24 * 30,  # 30 days retention
+                
+                # Redis persistence settings (survives restarts)
+                persistence_config={
+                    "save": "900 1 300 10 60 10000",  # RDB snapshots
+                    "appendonly": "yes",               # AOF for durability
+                    "appendfsync": "everysec"          # Sync every second
+                }
+            )
+            
+            # Create chat memory with persistent Redis storage
+            memory = ChatMemory(
+                storage=redis_storage,      # PERSISTENT BACKEND
+                max_messages=2000,          # More messages since it's persistent
+                compress_when_full=True,
+                session_ttl=60 * 60 * 24 * 30,  # 30 day session retention
+                
+                # Additional persistence settings
+                auto_save_interval=30,      # Save every 30 seconds
+                batch_operations=True       # Batch Redis operations for efficiency
+            )
+            
+        except ImportError:
+            logger.warning("Agno RedisStorage not available, falling back to basic Redis connection")
+            
+            # Fallback to basic Redis (still can be persistent if Redis is configured)
+            memory = ChatMemory()
+            
+            # Try to configure Redis backend if supported
+            if hasattr(memory, 'set_backend'):
+                redis_config = {
+                    "url": self.settings.redis_url,
+                    "key_prefix": "agno_redis:",
+                    "ttl": 60 * 60 * 24 * 30
+                }
+                memory.set_backend('redis', **redis_config)
         
         return memory
 
