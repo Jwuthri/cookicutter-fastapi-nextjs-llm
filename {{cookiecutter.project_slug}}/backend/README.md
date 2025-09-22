@@ -179,12 +179,12 @@ raise ValidationError(
 │   │   │   ├── openrouter_client.py
 │   │   │   ├── custom_client.py
 │   │   │   └── factory.py     # LLM provider factory
-│   │   ├── memory/            # Conversation memory systems
+│   │   ├── memory/            # Conversation memory systems (Agno + custom)
 │   │   │   ├── base.py        # Memory interface
-│   │   │   ├── redis_memory.py
-│   │   │   ├── pinecone_memory.py
-│   │   │   ├── weaviate_memory.py
-│   │   │   └── in_memory.py
+│   │   │   ├── agno_memory.py # Agno-based implementations (preferred)
+│   │   │   ├── factory.py     # Smart memory factory with Agno-first approach
+│   │   │   ├── redis_memory.py # Custom Redis implementation (fallback)
+│   │   │   └── in_memory.py   # Custom in-memory implementation (fallback)
 │   │   └── security/          # Security and authentication
 │   │       ├── auth.py        # Database-backed authentication
 │   │       └── rate_limit.py  # Rate limiting middleware

@@ -7,7 +7,6 @@ from typing import Optional
 
 from app.config import Settings, get_settings
 from app.dependencies import get_redis_client, get_memory_store, get_llm_service, get_chat_service, get_conversation_service
-from app.services.chat_service import ChatService
 from app.services.conversation_service import ConversationService
 from app.core.security.rate_limit import RateLimiter
 from app.core.memory.base import MemoryInterface
@@ -15,8 +14,8 @@ from app.core.memory.base import MemoryInterface
 
 # Use DI container services directly
 async def get_chat_service_dep(
-    chat_service: ChatService = Depends(get_chat_service)
-) -> ChatService:
+    chat_service = Depends(get_chat_service)
+):
     """Get chat service instance from DI container."""
     return chat_service
 

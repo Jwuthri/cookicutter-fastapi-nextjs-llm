@@ -18,7 +18,6 @@ from app.services.kafka_client import KafkaClient
 from app.services.rabbitmq_client import RabbitMQClient
 from app.core.memory.base import MemoryInterface
 from app.core.llm.factory import get_llm_client
-from app.services.chat_service import ChatService
 from app.services.conversation_service import ConversationService
 from app.database.repositories import (
     UserRepository, 
@@ -74,9 +73,17 @@ def get_llm_service(settings: Settings = Depends(get_settings)):
     return get_llm_client(settings.llm_provider, settings)
 
 
-async def get_chat_service(container: DIContainer = Depends(get_scoped_container)) -> ChatService:
+async def get_chat_service(container: DIContainer = Depends(get_scoped_container)):
     """Get Chat service instance."""
-    return await container.get_service(ChatService)
+    # Use string key for ChatService since we use different implementations
+    if "ChatService" in container._services:
+        descriptor = container._services["ChatService"]
+        if descriptor.lifetime == ServiceLifetime.SCOPED:
+            return await container._get_scoped(descriptor)
+        else:
+            return await container._create_instance(descriptor)
+    else:
+        raise ValueError("ChatService not registered")
 
 
 async def get_conversation_service(container: DIContainer = Depends(get_scoped_container)) -> ConversationService:

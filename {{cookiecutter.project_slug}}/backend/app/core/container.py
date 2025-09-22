@@ -10,6 +10,7 @@ from enum import Enum
 
 from app.config import Settings
 from app.utils.logging import get_logger
+from app.exceptions import ConfigurationError
 
 logger = get_logger("container")
 
@@ -209,7 +210,6 @@ def _configure_services(container: DIContainer):
     from app.core.memory.base import MemoryInterface
     from app.core.memory.redis_memory import RedisMemory
     from app.core.memory.in_memory import InMemoryStore
-    from app.services.chat_service import ChatService
     from app.services.conversation_service import ConversationService
     from app.database.repositories import (
         UserRepository, ChatSessionRepository, ChatMessageRepository,
@@ -230,41 +230,82 @@ def _configure_services(container: DIContainer):
     container.register_scoped(TaskResultRepository)
     
     # Register business services as scoped
-    container.register_scoped(ChatService, factory=_create_chat_service)
+    # Note: Using string key for ChatService since we use different implementations
+    container._services["ChatService"] = ServiceDescriptor(
+        service_type=object,  # Generic type since we use protocol
+        implementation=None,
+        lifetime=ServiceLifetime.SCOPED,
+        factory=_create_chat_service
+    )
     container.register_scoped(ConversationService)
     container.register_scoped(MemoryInterface, factory=_create_memory_store)
     
     logger.info("All services registered in DI container")
 
 
-async def _create_chat_service() -> ChatService:
-    """Factory for ChatService with proper dependencies."""
-    container = get_container()
-    memory_store = await container.get_service(MemoryInterface)
-    
+async def _create_chat_service():
+    """Factory for ChatService using Agno-first approach with fallbacks."""
+    from app.services.chat_service_factory import create_chat_service_from_settings
     from app.config import get_settings
-    settings = get_settings()
-    llm_service = get_llm_client(settings.llm_provider, settings)
     
-    return ChatService(
+    container = get_container()
+    settings = get_settings()
+    
+    # Try to get dependencies for custom service fallback
+    memory_store = None
+    llm_service = None
+    
+    try:
+        memory_store = await container.get_service(MemoryInterface)
+    except Exception as e:
+        logger.debug(f"Memory store not available: {e}")
+    
+    try:
+        from app.core.llm.factory import get_llm_client
+        llm_service = get_llm_client(settings.llm_provider, settings)
+    except Exception as e:
+        logger.debug(f"LLM service not available: {e}")
+    
+    # Use the chat service factory with automatic selection
+    chat_service = await create_chat_service_from_settings(
+        settings=settings,
         memory_store=memory_store,
-        llm_service=llm_service,
-        settings=settings
+        llm_service=llm_service
     )
+    
+    logger.info(f"Created chat service: {chat_service.__class__.__name__}")
+    return chat_service
 
 
 async def _create_memory_store() -> MemoryInterface:
-    """Factory for memory store with fallback logic."""
-    container = get_container()
+    """Factory for memory store using Agno-first approach with fallbacks."""
+    from app.core.memory.factory import create_memory_from_settings
+    from app.config import get_settings
     
+    container = get_container()
+    settings = get_settings()
+    
+    # Try to get Redis client for providers that need it
+    redis_client = None
     try:
         redis_client = await container.get_service(RedisClient)
-        if await redis_client.health_check():
-            from app.core.memory.redis_memory import RedisMemory
-            return RedisMemory(redis_client)
+        logger.debug("Redis client available for memory store")
     except Exception as e:
-        logger.warning(f"Redis not available, falling back to in-memory store: {e}")
+        logger.debug(f"Redis client not available: {e}")
     
-    # Fallback to in-memory store
-    from app.core.memory.in_memory import InMemoryStore
-    return InMemoryStore()
+    try:
+        # Use the new Agno-first memory factory
+        memory_store = await create_memory_from_settings(settings, redis_client)
+        logger.info(f"Created memory store: {memory_store.__class__.__name__}")
+        return memory_store
+    except Exception as e:
+        logger.error(f"Failed to create configured memory store: {e}")
+        
+        # Ultimate fallback to in-memory store
+        try:
+            from app.core.memory.in_memory import InMemoryStore
+            logger.warning("Falling back to in-memory store")
+            return InMemoryStore()
+        except Exception as fallback_error:
+            logger.error(f"Even fallback memory store failed: {fallback_error}")
+            raise ConfigurationError(f"No memory store could be created: {e}")

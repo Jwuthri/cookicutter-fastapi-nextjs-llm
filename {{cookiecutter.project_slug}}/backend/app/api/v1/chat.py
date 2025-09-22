@@ -18,7 +18,6 @@ from app.models.chat import (
     ChatSession,
     MessageHistory
 )
-from app.services.chat_service import ChatService
 from app.services.conversation_service import ConversationService
 from app.exceptions import NotFoundError, ValidationError
 
@@ -28,7 +27,7 @@ router = APIRouter()
 @router.post("/", response_model=ChatResponse)
 async def send_message(
     request: ChatRequest,
-    chat_service: ChatService = Depends(get_chat_service_dep),
+    chat_service = Depends(get_chat_service_dep),
     current_user: Optional[ClerkUser] = Depends(get_current_user),
     _rate_limit_check = Depends(check_rate_limit)
 ) -> ChatResponse:
