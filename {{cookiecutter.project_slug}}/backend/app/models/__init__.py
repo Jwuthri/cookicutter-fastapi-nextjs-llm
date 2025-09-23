@@ -30,22 +30,7 @@ __all__ = [
     "LoginResponse",
     "UserStats",
     "UserListResponse",
-    # API Key models
-    "ApiKeyInfo",
-    "ApiKeyCreateRequest",
-    "ApiKeyCreateResponse",
-    "ApiKeyUpdateRequest",
-    "ApiKeyListResponse",
-    "ApiKeyUsageStats",
-    "ApiKeyValidationResponse",
-    # Task models
-    "TaskInfo",
-    "TaskSubmissionRequest",
-    "TaskSubmissionResponse",
-    "TaskProgressUpdate",
-    "TaskStatistics",
-    "TaskListResponse",
-    "TaskSystemStatus",
+    # Note: API Key and advanced Task models available but not currently used in endpoints
     # Base models
     "HealthResponse",
     "ErrorResponse",

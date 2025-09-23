@@ -142,3 +142,84 @@ async def liveness_check() -> Dict[str, Any]:
         "alive": True,
         "timestamp": datetime.now().isoformat()
     }
+
+
+@router.get("/database/pools")
+async def database_pool_status():
+    """
+    Get detailed database connection pool status.
+    """
+    try:
+        from app.core.monitoring.database import db_monitoring_service
+        pool_status = await db_monitoring_service.get_all_pool_status()
+        return {
+            "status": "success",
+            "pools": pool_status,
+            "timestamp": datetime.now().isoformat()
+        }
+    except ImportError:
+        return {
+            "status": "unavailable",
+            "message": "Database monitoring not available",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "error", 
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+
+@router.get("/database/health") 
+async def database_health_detailed():
+    """
+    Get detailed database health information.
+    """
+    try:
+        from app.core.monitoring.database import db_monitoring_service
+        health_results = await db_monitoring_service.health_check_all()
+        return {
+            "status": "success",
+            "health_checks": health_results,
+            "timestamp": datetime.now().isoformat()
+        }
+    except ImportError:
+        return {
+            "status": "unavailable",
+            "message": "Database monitoring not available", 
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+
+@router.get("/database/exhaustion")
+async def database_pool_exhaustion():
+    """
+    Check database pool exhaustion status.
+    """
+    try:
+        from app.core.monitoring.database import db_monitoring_service
+        exhaustion_results = await db_monitoring_service.check_all_exhaustion()
+        return {
+            "status": "success", 
+            "exhaustion_check": exhaustion_results,
+            "timestamp": datetime.now().isoformat()
+        }
+    except ImportError:
+        return {
+            "status": "unavailable",
+            "message": "Database monitoring not available",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "timestamp": datetime.now().isoformat()
+        }

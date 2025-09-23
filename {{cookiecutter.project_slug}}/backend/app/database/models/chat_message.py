@@ -2,7 +2,7 @@
 Chat message model for {{cookiecutter.project_name}}.
 """
 
-from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, JSON, Enum as SQLEnum, Index
+from sqlalchemy import Column, String, Text, Integer, DateTime, ForeignKey, JSON, Enum as SQLEnum, Index, text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -47,10 +47,12 @@ class ChatMessage(Base):
     session = relationship("ChatSession", back_populates="messages")
     parent_message = relationship("ChatMessage", remote_side=[id])
     
-    # Indexes for performance
+    # Essential indexes only (avoid index bloat!)
     __table_args__ = (
-        Index('idx_chat_messages_session_created', 'session_id', 'created_at'),
-        Index('idx_chat_messages_role', 'role', 'created_at'),
+        # Most critical: messages in session by time (for chat history)
+        Index('ix_chat_message_session_created', 'session_id', 'created_at'),
+        # Foreign key index
+        Index('ix_chat_message_session_id', 'session_id'),
     )
     
     def __repr__(self):

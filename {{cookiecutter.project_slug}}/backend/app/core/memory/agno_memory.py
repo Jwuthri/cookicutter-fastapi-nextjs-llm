@@ -1,19 +1,13 @@
 """
 Agno-based memory implementations for all vector databases.
 """
+from typing import Dict, List, Any, Optional
+from datetime import datetime
+from abc import abstractmethod
 
-import asyncio
-from typing import Dict, List, Any, Optional, Union
-from datetime import datetime, timedelta
-from abc import ABC, abstractmethod
-
-try:
-    from agno import Agent, Memory, VectorDB
-    from agno.memory import ChatMemory, VectorMemory, HybridMemory
-    from agno.vector_db import Pinecone, Weaviate, Qdrant, ChromaDB
-    AGNO_AVAILABLE = True
-except ImportError:
-    AGNO_AVAILABLE = False
+from agno import Agent, Memory
+from agno.memory import ChatMemory, VectorMemory, HybridMemory
+from agno.vectordb import Pinecone, Weaviate, Qdrant, ChromaDB
 
 from app.core.memory.base import MemoryInterface
 from app.exceptions import ConfigurationError, ExternalServiceError
@@ -25,10 +19,7 @@ logger = get_logger("agno_memory")
 class AgnoMemoryInterface(MemoryInterface):
     """Base class for Agno-based memory implementations."""
     
-    def __init__(self, settings: Any):
-        if not AGNO_AVAILABLE:
-            raise ConfigurationError("Agno package not installed. Install with: pip install agno")
-        
+    def __init__(self, settings: Any):        
         self.settings = settings
         self.memory: Optional[Memory] = None
         self._initialized = False
@@ -204,25 +195,11 @@ class AgnoPineconeMemory(AgnoMemoryInterface):
         # Create Pinecone vector store with persistence settings
         vector_db = Pinecone(**pinecone_config)
         
-        # Create persistent Redis storage for chat memory
-        try:
-            from agno.storage import RedisStorage
-            redis_storage = RedisStorage(
-                host=getattr(self.settings, 'redis_host', 'localhost'),
-                port=getattr(self.settings, 'redis_port', 6379),
-                db=getattr(self.settings, 'redis_db', 2),  # Separate DB for Agno
-                key_prefix="agno_pinecone:",
-                ttl=60 * 60 * 24 * 30  # 30 days retention
-            )
-            
-            chat_memory = ChatMemory(
-                storage=redis_storage,  # PERSISTENT REDIS BACKEND
-                max_messages=1000,
-                compress_when_full=True
-            )
-        except (ImportError, Exception) as e:
-            logger.warning(f"Redis storage not available, using non-persistent chat memory: {e}")
-            chat_memory = ChatMemory()
+        # Create hybrid memory (Pinecone automatically persistent)
+        # Note: Agno handles persistence through db parameter on Agent, not memory storage
+        chat_memory = ChatMemory()
+        
+        logger.info("Using Pinecone vector memory (persistent) + chat memory")
         
         # Create hybrid memory (PERSISTENT chat + vector)
         return HybridMemory(
@@ -319,51 +296,11 @@ class AgnoRedisMemory(AgnoMemoryInterface):
     
     async def _create_agno_memory(self) -> Memory:
         """Create Agno memory with Redis backend (PERSISTENT)."""
-        try:
-            from agno.storage import RedisStorage
-            
-            # Create persistent Redis storage for Agno
-            redis_storage = RedisStorage(
-                url=self.settings.redis_url,
-                
-                # Persistence configuration  
-                key_prefix="agno_redis:",
-                ttl=60 * 60 * 24 * 30,  # 30 days retention
-                
-                # Redis persistence settings (survives restarts)
-                persistence_config={
-                    "save": "900 1 300 10 60 10000",  # RDB snapshots
-                    "appendonly": "yes",               # AOF for durability
-                    "appendfsync": "everysec"          # Sync every second
-                }
-            )
-            
-            # Create chat memory with persistent Redis storage
-            memory = ChatMemory(
-                storage=redis_storage,      # PERSISTENT BACKEND
-                max_messages=2000,          # More messages since it's persistent
-                compress_when_full=True,
-                session_ttl=60 * 60 * 24 * 30,  # 30 day session retention
-                
-                # Additional persistence settings
-                auto_save_interval=30,      # Save every 30 seconds
-                batch_operations=True       # Batch Redis operations for efficiency
-            )
-            
-        except ImportError:
-            logger.warning("Agno RedisStorage not available, falling back to basic Redis connection")
-            
-            # Fallback to basic Redis (still can be persistent if Redis is configured)
-            memory = ChatMemory()
-            
-            # Try to configure Redis backend if supported
-            if hasattr(memory, 'set_backend'):
-                redis_config = {
-                    "url": self.settings.redis_url,
-                    "key_prefix": "agno_redis:",
-                    "ttl": 60 * 60 * 24 * 30
-                }
-                memory.set_backend('redis', **redis_config)
+        # Note: Redis persistence is handled through Agent's db parameter in current Agno API
+        # The memory itself is just the interface, persistence is managed by RedisDb
+        
+        memory = ChatMemory()
+        logger.info("Created Redis-backed chat memory (persistence handled by Agent's RedisDb)")
         
         return memory
 

@@ -40,10 +40,12 @@ class ChatSession(Base):
     user = relationship("User", back_populates="chat_sessions")
     messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan", order_by="ChatMessage.created_at")
     
-    # Indexes for performance
+    # Essential indexes only (avoid index bloat!)
     __table_args__ = (
-        Index('idx_chat_sessions_user_created', 'user_id', 'created_at'),
-        Index('idx_chat_sessions_active', 'is_active', 'updated_at'),
+        # Most critical: user sessions lookup with sorting
+        Index('ix_chat_session_user_updated', 'user_id', 'updated_at'),
+        # Foreign key index (automatically created in many DBs but explicit is better)
+        Index('ix_chat_session_user_id', 'user_id'),
     )
     
     def __repr__(self):

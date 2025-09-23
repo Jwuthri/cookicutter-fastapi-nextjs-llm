@@ -204,8 +204,7 @@ def get_container() -> DIContainer:
 def _configure_services(container: DIContainer):
     """Configure all services in the DI container."""
     from app.services.redis_client import RedisClient
-    from app.services.kafka_client import KafkaClient
-    from app.services.rabbitmq_client import RabbitMQClient
+    # Note: Import message queue clients (Kafka, RabbitMQ) when needed
     from app.core.llm.factory import get_llm_client
     from app.core.memory.base import MemoryInterface
     from app.core.memory.redis_memory import RedisMemory
@@ -218,8 +217,7 @@ def _configure_services(container: DIContainer):
     
     # Register infrastructure services as singletons
     container.register_singleton(RedisClient)
-    container.register_singleton(KafkaClient)
-    container.register_singleton(RabbitMQClient)
+    # Note: Register message queue clients (Kafka, RabbitMQ) when implemented
     
     # Register repositories as scoped (per-request)
     container.register_scoped(UserRepository)

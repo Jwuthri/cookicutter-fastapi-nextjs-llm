@@ -3,18 +3,21 @@ Custom middleware for {{cookiecutter.project_name}}.
 """
 
 import time
+import json
 from typing import Callable
 from uuid import uuid4
 
-from fastapi import Request, Response
+from fastapi import Request, Response, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from .utils.logging import get_logger
+
+from app.utils.logging import get_logger
+from app.config import get_settings
+from app.core.security.input_sanitization import input_sanitizer
+from app.middleware.tracing_middleware import TracingMiddleware
 
 logger = get_logger("middleware")
-
-from app.config import get_settings
 
 
 class RequestScopeMiddleware(BaseHTTPMiddleware):
@@ -166,6 +169,132 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.client_requests[client_ip].append(current_time)
 
 
+class InputSanitizationMiddleware(BaseHTTPMiddleware):
+    """Middleware for input sanitization and XSS/injection protection."""
+    
+    # Endpoints that require strict prompt injection checking
+    CHAT_ENDPOINTS = ["/api/v1/chat/", "/api/v1/completions/"]
+    
+    # Maximum request body size (10MB)
+    MAX_BODY_SIZE = 10 * 1024 * 1024
+    
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        # Skip for GET requests and certain endpoints
+        if request.method == "GET" or request.url.path in ["/health", "/docs", "/redoc", "/openapi.json"]:
+            return await call_next(request)
+        
+        try:
+            # Check request body size
+            if hasattr(request, 'headers') and 'content-length' in request.headers:
+                content_length = int(request.headers['content-length'])
+                if content_length > self.MAX_BODY_SIZE:
+                    logger.warning(f"Request body too large: {content_length} bytes")
+                    return Response(
+                        content="Request body too large",
+                        status_code=413,
+                        headers={"Content-Type": "application/json"}
+                    )
+            
+            # Read and sanitize request body for POST/PUT requests
+            if request.method in ["POST", "PUT", "PATCH"]:
+                # Get request body
+                body = await request.body()
+                
+                if body:
+                    try:
+                        # Parse JSON body
+                        body_json = json.loads(body)
+                        sanitized_body = await self._sanitize_json_recursively(
+                            body_json, 
+                            is_chat_endpoint=request.url.path in self.CHAT_ENDPOINTS
+                        )
+                        
+                        # Replace request body with sanitized version
+                        sanitized_body_bytes = json.dumps(sanitized_body).encode('utf-8')
+                        
+                        # Create new request with sanitized body
+                        async def receive():
+                            return {
+                                "type": "http.request",
+                                "body": sanitized_body_bytes,
+                                "more_body": False,
+                            }
+                        
+                        request._receive = receive
+                        
+                    except json.JSONDecodeError:
+                        # For non-JSON bodies, apply basic sanitization
+                        body_str = body.decode('utf-8', errors='ignore')
+                        sanitized = input_sanitizer.sanitize_html(body_str, strip_tags=True)
+                        
+                        async def receive():
+                            return {
+                                "type": "http.request", 
+                                "body": sanitized.encode('utf-8'),
+                                "more_body": False,
+                            }
+                        
+                        request._receive = receive
+            
+            return await call_next(request)
+            
+        except Exception as e:
+            logger.error(f"Input sanitization error: {e}")
+            return Response(
+                content=json.dumps({"error": "Request processing failed"}),
+                status_code=400,
+                headers={"Content-Type": "application/json"}
+            )
+    
+    async def _sanitize_json_recursively(self, obj, is_chat_endpoint: bool = False):
+        """Recursively sanitize JSON object."""
+        if isinstance(obj, dict):
+            sanitized = {}
+            for key, value in obj.items():
+                # Sanitize key
+                clean_key = input_sanitizer.sanitize_html(str(key), strip_tags=True)
+                
+                # Recursively sanitize value
+                sanitized[clean_key] = await self._sanitize_json_recursively(
+                    value, is_chat_endpoint
+                )
+            return sanitized
+            
+        elif isinstance(obj, list):
+            return [
+                await self._sanitize_json_recursively(item, is_chat_endpoint) 
+                for item in obj
+            ]
+            
+        elif isinstance(obj, str):
+            # Special handling for chat messages
+            if is_chat_endpoint and len(obj) > 0:
+                result = input_sanitizer.validate_and_sanitize_input(
+                    obj,
+                    max_length=5000,
+                    allow_html=False,
+                    check_injection=True
+                )
+                
+                if not result["is_valid"]:
+                    logger.warning(
+                        f"Blocked potential prompt injection - Risk: {result['injection_check']['risk_score']:.2f}"
+                    )
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Input contains potentially harmful content"
+                    )
+                
+                return result["sanitized"]
+            else:
+                # Regular string sanitization
+                return input_sanitizer.sanitize_html(obj, strip_tags=True)
+        
+        else:
+            # Return other types as-is (numbers, booleans, null)
+            return obj
+
+
 def setup_middleware(app):
     """Set up all middleware for the application."""
     settings = get_settings()
@@ -179,6 +308,10 @@ def setup_middleware(app):
         allow_headers=["*"],
     )
     
+    # Distributed tracing middleware (early in the chain)
+    if settings.enable_tracing:
+        app.add_middleware(TracingMiddleware, service_name=settings.app_name)
+    
     # Gzip compression
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     
@@ -191,6 +324,9 @@ def setup_middleware(app):
             RateLimitMiddleware,
             requests_per_minute=settings.rate_limit_requests
         )
+    
+    # Input sanitization (before business logic)
+    app.add_middleware(InputSanitizationMiddleware)
     
     # Request-scoped dependency injection cleanup
     app.add_middleware(RequestScopeMiddleware)

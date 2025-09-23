@@ -17,9 +17,11 @@ from app.api.v1.router import api_router
 from app.models.base import APIInfo
 from app.core.config.validation import setup_config_validation
 from app.core.monitoring import setup_monitoring
+from app.core.tracing import initialize_tracing, instrument_fastapi_app, shutdown_tracing
 {% if cookiecutter.use_websockets == "yes" %}
-from app.websocket_manager import WebSocketManager
-from app.api.websockets import setup_websocket_routes
+# Note: WebSocket support can be added by implementing:
+# - WebSocketManager in app.websocket_manager
+# - setup_websocket_routes in app.api.websockets
 {% endif %}
 from .utils.logging import get_logger
 
@@ -38,6 +40,14 @@ async def lifespan(app: FastAPI):
         setup_config_validation(settings)
         logger.info("Configuration validation completed")
         
+        # Initialize distributed tracing
+        if settings.enable_tracing:
+            tracing_initialized = initialize_tracing(settings)
+            if tracing_initialized:
+                logger.info("Distributed tracing initialized successfully")
+            else:
+                logger.warning("Failed to initialize distributed tracing")
+        
         # Initialize services
         await initialize_services()
         logger.info("All services initialized successfully")
@@ -50,6 +60,11 @@ async def lifespan(app: FastAPI):
         try:
             await cleanup_services()
             logger.info("All services cleaned up successfully")
+            
+            # Shutdown tracing
+            if settings.enable_tracing:
+                shutdown_tracing()
+                logger.info("Distributed tracing shutdown completed")
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
 
@@ -68,6 +83,11 @@ app = FastAPI(
 # Setup middleware
 setup_middleware(app)
 
+# Setup distributed tracing instrumentation
+if settings.enable_tracing:
+    instrument_fastapi_app(app, settings)
+    logger.info("FastAPI tracing instrumentation enabled")
+
 # Setup exception handlers  
 setup_exception_handlers(app)
 
@@ -78,8 +98,8 @@ setup_monitoring(app, settings)
 app.include_router(api_router, prefix="/api")
 
 {% if cookiecutter.use_websockets == "yes" %}
-# Setup WebSocket routes
-setup_websocket_routes(app)
+# TODO: Setup WebSocket routes when implemented
+# setup_websocket_routes(app)
 {% endif %}
 
 # Root endpoint

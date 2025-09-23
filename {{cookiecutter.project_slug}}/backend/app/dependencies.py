@@ -10,12 +10,10 @@ from fastapi import Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.config import Settings, get_settings
-from app.core.container import get_container, DIContainer
+from app.core.container import get_container, DIContainer, ServiceLifetime
 from app.database.base import get_db, SessionLocal
 from app.database.session import get_async_db_session, get_async_db_transaction, get_database_manager
 from app.services.redis_client import RedisClient
-from app.services.kafka_client import KafkaClient
-from app.services.rabbitmq_client import RabbitMQClient
 from app.core.memory.base import MemoryInterface
 from app.core.llm.factory import get_llm_client
 from app.services.conversation_service import ConversationService
@@ -53,14 +51,7 @@ async def get_redis_client(container: DIContainer = Depends(get_scoped_container
     return await container.get_service(RedisClient)
 
 
-async def get_kafka_client(container: DIContainer = Depends(get_scoped_container)) -> KafkaClient:
-    """Get Kafka client instance."""
-    return await container.get_service(KafkaClient)
-
-
-async def get_rabbitmq_client(container: DIContainer = Depends(get_scoped_container)) -> RabbitMQClient:
-    """Get RabbitMQ client instance."""
-    return await container.get_service(RabbitMQClient)
+# Note: Kafka and RabbitMQ clients can be added when needed
 
 
 async def get_memory_store(container: DIContainer = Depends(get_scoped_container)) -> MemoryInterface:
@@ -142,20 +133,7 @@ async def check_redis_health(redis_client: RedisClient = Depends(get_redis_clien
         return False
 
 
-async def check_kafka_health(kafka_client: KafkaClient = Depends(get_kafka_client)) -> bool:
-    """Check Kafka health."""
-    try:
-        return await kafka_client.health_check()
-    except Exception:
-        return False
-
-
-async def check_rabbitmq_health(rabbitmq_client: RabbitMQClient = Depends(get_rabbitmq_client)) -> bool:
-    """Check RabbitMQ health."""
-    try:
-        return await rabbitmq_client.health_check()
-    except Exception:
-        return False
+# Note: Add Kafka and RabbitMQ health checks when clients are implemented
 
 
 # Validation dependencies
@@ -227,8 +205,7 @@ async def initialize_services():
     container = get_container()
     try:
         await container.get_service(RedisClient)
-        await container.get_service(KafkaClient) 
-        await container.get_service(RabbitMQClient)
+        # Note: Add Kafka and RabbitMQ service initialization when clients are implemented
     except Exception as e:
         # Clean up on failure
         await container.dispose()

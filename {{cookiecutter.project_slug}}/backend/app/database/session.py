@@ -22,6 +22,9 @@ from app.utils.logging import get_logger
 
 logger = get_logger("database_session")
 
+# Import monitoring (lazy to avoid circular imports)
+_monitoring_registered = False
+
 # Global async engine and session factory
 _async_engine: Optional[AsyncEngine] = None
 _async_session_factory: Optional[async_sessionmaker[AsyncSession]] = None
@@ -87,11 +90,40 @@ def create_async_database_engine() -> AsyncEngine:
 
 def get_async_engine() -> AsyncEngine:
     """Get or create the async database engine."""
-    global _async_engine
+    global _async_engine, _monitoring_registered
     if _async_engine is None:
         _async_engine = create_async_database_engine()
         logger.info("Async database engine created")
+        
+        # Register for monitoring
+        if not _monitoring_registered:
+            _register_database_monitoring(_async_engine)
+            _monitoring_registered = True
     return _async_engine
+
+
+def _register_database_monitoring(engine: AsyncEngine):
+    """Register the database engine for monitoring."""
+    try:
+        from app.core.monitoring.database import db_monitoring_service
+        
+        # Determine pool name from database URL
+        settings = get_settings()
+        pool_name = "default"
+        
+        if settings.database_url:
+            if "postgresql" in settings.database_url:
+                pool_name = "postgresql"
+            elif "sqlite" in settings.database_url:
+                pool_name = "sqlite"
+        
+        db_monitoring_service.register_pool(engine, pool_name)
+        logger.info(f"Database monitoring registered for pool: {pool_name}")
+        
+    except ImportError:
+        logger.warning("Database monitoring not available - skipping registration")
+    except Exception as e:
+        logger.error(f"Failed to register database monitoring: {e}")
 
 
 def get_async_session_factory() -> async_sessionmaker[AsyncSession]:

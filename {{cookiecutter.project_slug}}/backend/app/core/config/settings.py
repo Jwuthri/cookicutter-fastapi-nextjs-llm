@@ -3,6 +3,7 @@ Application settings with environment-specific configurations.
 """
 
 import os
+import re
 import secrets
 from enum import Enum
 from functools import lru_cache
@@ -88,6 +89,7 @@ class Settings(BaseSettings):
     
     # Redis Configuration
     redis_url: str = Field(default="redis://localhost:6379/0", description="Redis connection URL")
+    redis_password: Optional[SecretStr] = Field(default=None, description="Redis password")
     redis_max_connections: int = Field(default=100, ge=1, le=1000, description="Redis max connections")
     redis_socket_timeout: int = Field(default=5, ge=1, le=60, description="Redis socket timeout")
     redis_health_check_interval: int = Field(default=30, ge=5, le=300, description="Redis health check interval")
@@ -208,6 +210,32 @@ class Settings(BaseSettings):
     metrics_path: str = Field(default="/metrics", description="Metrics endpoint path")
     enable_health_checks: bool = Field(default=True, description="Enable health check endpoints")
     health_check_timeout: int = Field(default=30, ge=1, le=300, description="Health check timeout")
+    
+    # Distributed Tracing Configuration
+    enable_tracing: bool = Field(default=False, description="Enable distributed tracing with OpenTelemetry")
+    tracing_exporter: str = Field(
+        default="console", 
+        regex="^(console|jaeger|zipkin|otlp)$", 
+        description="Tracing exporter type"
+    )
+    tracing_sample_rate: float = Field(
+        default=1.0, 
+        ge=0.0, 
+        le=1.0, 
+        description="Tracing sample rate (0.0 to 1.0)"
+    )
+    jaeger_endpoint: str = Field(
+        default="http://localhost:14268/api/traces", 
+        description="Jaeger collector endpoint"
+    )
+    zipkin_endpoint: str = Field(
+        default="http://localhost:9411/api/v2/spans", 
+        description="Zipkin collector endpoint"
+    )
+    otlp_endpoint: str = Field(
+        default="http://localhost:4317", 
+        description="OTLP gRPC collector endpoint"
+    )
     
     # Celery Configuration (Background Tasks)
     celery_broker_url: str = Field(default="redis://localhost:6379/1", description="Celery broker URL")
@@ -346,6 +374,44 @@ class Settings(BaseSettings):
     def is_testing(self) -> bool:
         """Check if running in testing environment."""
         return self.environment == Environment.TESTING or self.testing
+    
+    def get_redis_url_with_auth(self, db: Optional[int] = None) -> str:
+        """
+        Get Redis URL with authentication if password is provided.
+        
+        Args:
+            db: Database number to use (overrides URL default)
+            
+        Returns:
+            Complete Redis URL with authentication
+        """
+        # Check if we have a password
+        password = self.get_secret("redis_password")
+        
+        # If redis_url is already set and has password, use it
+        if password and "@" in self.redis_url:
+            # URL already has auth, use as-is but potentially update db
+            base_url = self.redis_url
+        elif password:
+            # Parse existing URL to add password
+            # Extract components from redis_url (e.g., redis://localhost:6379/0)
+            match = re.match(r'redis://([^/]+)(/.+)?', self.redis_url)
+            if match:
+                host_port = match.group(1)
+                db_part = match.group(2) or "/0"
+                base_url = f"redis://:{password}@{host_port}{db_part}"
+            else:
+                # Fallback to default format
+                base_url = f"redis://:{password}@localhost:6379/0"
+        else:
+            # No password, use existing URL
+            base_url = self.redis_url
+        
+        # Override database number if specified
+        if db is not None:
+            base_url = re.sub(r'/\d+$', f'/{db}', base_url)
+            
+        return base_url
     
     class Config:
         env_file = ".env"
