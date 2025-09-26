@@ -55,7 +55,7 @@ conda install cookiecutter
 
 ### 2. **Generate Your Project**
 ```bash
-cookiecutter https://github.com/Jwuthri/cookiecutter-fastapi-nextjs-llm
+cookiecutter https://github.com/Jwuthri/cookicutter-fastapi-nextjs-llm.git
 ```
 
 ### 3. **Answer the Prompts**
