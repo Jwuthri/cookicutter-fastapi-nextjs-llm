@@ -28,7 +28,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ cookiecutter.PYTHON_VERSION }}
+          python-version: ${{ cookiecutter.python_version }}
           
       - name: Install dependencies
         run: |
@@ -65,7 +65,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ cookiecutter.PYTHON_VERSION }}
+          python-version: ${{ cookiecutter.python_version }}
           
       - name: Install dependencies
         run: |
@@ -125,7 +125,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ cookiecutter.PYTHON_VERSION }}
+          python-version: ${{ cookiecutter.python_version }}
           
       - name: Install dependencies
         run: |
@@ -188,7 +188,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ cookiecutter.PYTHON_VERSION }}
+          python-version: ${{ cookiecutter.python_version }}
           
       - name: Install dependencies
         run: |
@@ -252,7 +252,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ cookiecutter.PYTHON_VERSION }}
+          python-version: ${{ cookiecutter.python_version }}
           
       - name: Install dependencies
         run: |
@@ -286,7 +286,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: ${{ cookiecutter.PYTHON_VERSION }}
+          python-version: ${{ cookiecutter.python_version }}
           
       - name: Install dependencies
         run: |
