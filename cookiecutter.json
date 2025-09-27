@@ -39,12 +39,7 @@
         "*.woff2",
         "*.ttf",
         "*.eot",
-        "backend/scripts/*.sh",
         ".pre-commit-config.yaml",
-        ".secrets.baseline",
-        "docker-compose.yml",
-        "backend/docker/docker-compose.yml",
-        "backend/docker/docker-compose.dev.yml",
-        "backend/pyproject.toml"
+        ".secrets.baseline"
     ]
 }
