@@ -57,7 +57,7 @@ class Completion(Base):
     completed_at = Column(DateTime, nullable=True)
 
     # Additional metadata
-    metadata = Column(JSON, default={})
+    extra_metadata = Column(JSON, default={})
 
     # Relationships
     user = relationship("User", back_populates="completions")

@@ -244,6 +244,7 @@ def _configure_services(container: DIContainer):
 async def _create_chat_service():
     """Factory for ChatService using Agno-first approach with fallbacks."""
     from app.config import get_settings
+    from app.core.memory.base import MemoryInterface
     from app.services.chat_service_factory import create_chat_service_from_settings
 
     container = get_container()
@@ -275,10 +276,11 @@ async def _create_chat_service():
     return chat_service
 
 
-async def _create_memory_store() -> MemoryInterface:
+async def _create_memory_store():
     """Factory for memory store using Agno-first approach with fallbacks."""
     from app.config import get_settings
     from app.core.memory.factory import create_memory_from_settings
+    from app.services.redis_client import RedisClient
 
     container = get_container()
     settings = get_settings()

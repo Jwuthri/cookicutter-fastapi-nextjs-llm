@@ -147,7 +147,7 @@ class OptimizedChatRepository:
                 selectinload(ChatSession.messages)
                 .options(
                     # Load message metadata efficiently
-                    selectinload(ChatMessage.metadata) if hasattr(ChatMessage, 'metadata') else None
+                    selectinload(ChatMessage.extra_metadata) if hasattr(ChatMessage, 'metadata') else None
                 )
             )
         )

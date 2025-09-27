@@ -31,7 +31,7 @@ class ModelConverter:
             messages=messages,
             created_at=db_session.created_at,
             updated_at=db_session.updated_at,
-            metadata=db_session.metadata or {}
+            metadata=db_session.extra_metadata or {}
         )
 
     @staticmethod
@@ -42,7 +42,7 @@ class ModelConverter:
             content=db_message.content,
             role=pydantic_models.MessageRole(db_message.role.value),
             timestamp=db_message.created_at,
-            metadata=db_message.metadata or {}
+            metadata=db_message.extra_metadata or {}
         )
 
     @staticmethod

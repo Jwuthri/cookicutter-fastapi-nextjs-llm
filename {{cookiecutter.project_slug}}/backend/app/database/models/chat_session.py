@@ -45,7 +45,7 @@ class ChatSession(Base):
 
     # Session settings and metadata
     settings = Column(JSON, default={})  # Temperature, max_tokens, etc.
-    metadata = Column(JSON, default={})  # Additional session data
+    extra_metadata = Column(JSON, default={})  # Additional session data
 
     # Relationships
     user = relationship("User", back_populates="chat_sessions")

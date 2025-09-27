@@ -492,4 +492,4 @@ class TestChatMessageRepository:
         assert message.model_name == "gpt-4o-mini"
         assert message.token_count == 50
         assert message.processing_time_ms == 1500
-        assert message.metadata == metadata
+        assert message.extra_metadata == metadata

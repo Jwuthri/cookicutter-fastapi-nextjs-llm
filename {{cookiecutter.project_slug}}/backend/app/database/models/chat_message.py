@@ -41,7 +41,7 @@ class ChatMessage(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Additional metadata
-    metadata = Column(JSON, default={})  # Context, parameters, etc.
+    extra_metadata = Column(JSON, default={})  # Context, parameters, etc.
 
     # Parent message for threading (if implemented later)
     parent_message_id = Column(String, ForeignKey("chat_messages.id"), nullable=True)
