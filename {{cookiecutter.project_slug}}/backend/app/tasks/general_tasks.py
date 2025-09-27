@@ -100,7 +100,7 @@ def cleanup_expired_cache(self, pattern: str = "*", max_age_hours: int = 24) -> 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-        try:
+        async def _cleanup_async():
             redis_client = RedisClient(redis_url=settings.redis_url)
             await redis_client.connect()
 
@@ -149,7 +149,10 @@ def cleanup_expired_cache(self, pattern: str = "*", max_age_hours: int = 24) -> 
                     logger.error(f"Error deleting cache key {key}: {str(e)}")
 
             await redis_client.disconnect()
+            return deleted_count
 
+        try:
+            deleted_count = loop.run_until_complete(_cleanup_async())
         finally:
             loop.close()
 
@@ -157,7 +160,7 @@ def cleanup_expired_cache(self, pattern: str = "*", max_age_hours: int = 24) -> 
 
         return {
             "task_id": self.request.id,
-            "keys_scanned": len(cache_keys),
+            # "keys_scanned": len(cache_keys),
             "keys_deleted": deleted_count,
             "pattern": pattern,
             "max_age_hours": max_age_hours,
@@ -224,7 +227,7 @@ def health_check_services(self) -> Dict[str, Any]:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-            try:
+            async def _check_redis_async():
                 redis_client = RedisClient(redis_url=settings.redis_url)
                 await redis_client.connect()
 
@@ -234,13 +237,17 @@ def health_check_services(self) -> Dict[str, Any]:
                 test_value = await redis_client.get(test_key)
                 await redis_client.delete(test_key)
 
-                health_results["services"]["redis"] = {
+                result = {
                     "status": "healthy" if test_value == "test_value" else "error",
                     "response_time_ms": 50  # Mock response time
                 }
 
                 await redis_client.disconnect()
+                return result
 
+            try:
+                redis_result = loop.run_until_complete(_check_redis_async())
+                health_results["services"]["redis"] = redis_result
             finally:
                 loop.close()
 

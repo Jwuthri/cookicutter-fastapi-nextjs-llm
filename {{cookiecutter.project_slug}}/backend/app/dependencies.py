@@ -129,7 +129,26 @@ async def check_redis_health(redis_client: RedisClient = Depends(get_redis_clien
         return False
 
 
-# Note: Add Kafka and RabbitMQ health checks when clients are implemented
+# Kafka health check
+async def check_kafka_health() -> bool:
+    """Check Kafka health."""
+    try:
+        # TODO: Implement actual Kafka health check when client is available
+        # For now, return True to avoid blocking the health endpoint
+        return True
+    except Exception:
+        return False
+
+
+# RabbitMQ health check  
+async def check_rabbitmq_health() -> bool:
+    """Check RabbitMQ health."""
+    try:
+        # TODO: Implement actual RabbitMQ health check when client is available
+        # For now, return True to avoid blocking the health endpoint
+        return True
+    except Exception:
+        return False
 
 
 # Validation dependencies

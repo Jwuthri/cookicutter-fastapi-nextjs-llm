@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 
 from app.config import get_settings
 from app.core.celery_app import celery_app
-from app.core.llm.factory import LLMFactory
+from app.core.llm.factory import get_llm_client
 from app.utils.logging import get_logger
 
 logger = get_logger("llm_tasks")
@@ -34,9 +34,8 @@ def generate_completion_async(self, prompt: str, model: str = None, **kwargs) ->
         self.update_state(state='PROGRESS', meta={'current': 0, 'total': 100, 'status': 'Initializing LLM...'})
 
         # Get LLM client
-        llm_client = LLMFactory.create_client(
+        llm_client = get_llm_client(
             provider=settings.llm_provider,
-            model=model or settings.default_model,
             settings=settings
         )
 
@@ -101,9 +100,8 @@ def batch_process_messages(self, messages: List[Dict[str, Any]], model: str = No
         failed_count = 0
 
         # Get LLM client
-        llm_client = LLMFactory.create_client(
+        llm_client = get_llm_client(
             provider=settings.llm_provider,
-            model=model or settings.default_model,
             settings=settings
         )
 

@@ -10,6 +10,7 @@ from app.dependencies import (
     get_chat_service,
     get_conversation_service,
     get_redis_client,
+    get_llm_client,  # noqa: F401
 )
 from app.services.conversation_service import ConversationService
 from fastapi import Depends, Header, HTTPException, status

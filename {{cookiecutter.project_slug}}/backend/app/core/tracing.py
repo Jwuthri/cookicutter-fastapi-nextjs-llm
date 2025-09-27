@@ -14,14 +14,29 @@ from app.utils.logging import get_logger
 from opentelemetry import baggage, context, trace
 
 # Exporters
-from opentelemetry.exporter.jaeger.thrift import JaegerExporter
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.exporter.zipkin.json import ZipkinExporter
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-from opentelemetry.instrumentation.redis import RedisInstrumentor
-from opentelemetry.instrumentation.requests import RequestsInstrumentor
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+# Conditional imports for tracing (optional dependencies)
+try:
+    from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    from opentelemetry.exporter.zipkin.json import ZipkinExporter
+    from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+    from opentelemetry.instrumentation.redis import RedisInstrumentor
+    from opentelemetry.instrumentation.requests import RequestsInstrumentor
+    from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+    TRACING_AVAILABLE = True
+except ImportError as e:
+    # Tracing dependencies not installed
+    TRACING_AVAILABLE = False
+    JaegerExporter = None
+    OTLPSpanExporter = None
+    ZipkinExporter = None
+    FastAPIInstrumentor = None
+    HTTPXClientInstrumentor = None
+    RedisInstrumentor = None
+    RequestsInstrumentor = None
+    SQLAlchemyInstrumentor = None
+
 from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
@@ -347,6 +362,10 @@ def initialize_tracing(settings: Settings) -> bool:
     Returns:
         bool: True if tracing was successfully initialized
     """
+    if not TRACING_AVAILABLE:
+        logger.warning("Tracing dependencies not available. Skipping tracing initialization.")
+        return False
+
     global tracing_config
 
     tracing_config = TracingConfig(settings)
@@ -355,6 +374,10 @@ def initialize_tracing(settings: Settings) -> bool:
 
 def instrument_fastapi_app(app, settings: Settings):
     """Instrument FastAPI app with distributed tracing."""
+    if not TRACING_AVAILABLE:
+        logger.warning("Tracing dependencies not available. Skipping FastAPI instrumentation.")
+        return
+
     global tracing_config
 
     if tracing_config is None:
