@@ -21,7 +21,7 @@ class DevelopmentSettings(Settings):
     testing: bool = False
 
     # Relaxed security for development
-    cors_origins = [
+    cors_origins: list[str] = [
         "http://localhost:3000",
         "http://localhost:{{cookiecutter.frontend_port}}",
         "http://127.0.0.1:3000",
@@ -60,7 +60,7 @@ class DevelopmentSettings(Settings):
     enable_user_registration: bool = True
 
     # Development-specific settings
-    reload_includes = ["*.py", "*.html", "*.css", "*.js"]
+    reload_includes: list[str] = ["*.py", "*.html", "*.css", "*.js"]
 
 
 class TestingSettings(Settings):
@@ -136,7 +136,7 @@ class StagingSettings(Settings):
     enable_health_checks: bool = True
 
     # Staging-specific CORS (more restrictive than dev)
-    cors_origins = [
+    cors_origins: list[str] = [
         "https://staging.{{cookiecutter.project_slug}}.com",
         "https://{{cookiecutter.project_slug}}-staging.vercel.app",
     ]
@@ -170,11 +170,11 @@ class ProductionSettings(Settings):
     rate_limit_requests: int = 100
 
     # Production CORS - must be configured
-    cors_origins = [
+    cors_origins: list[str] = [
         "https://{{cookiecutter.project_slug}}.com",
         "https://www.{{cookiecutter.project_slug}}.com",
     ]
-    allowed_hosts = [
+    allowed_hosts: list[str] = [
         "{{cookiecutter.project_slug}}.com",
         "www.{{cookiecutter.project_slug}}.com",
         "api.{{cookiecutter.project_slug}}.com",

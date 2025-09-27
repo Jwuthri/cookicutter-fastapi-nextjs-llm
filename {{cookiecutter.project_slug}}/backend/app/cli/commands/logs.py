@@ -49,7 +49,7 @@ def test(format, level):
     try:
         # Setup logging with current environment
         settings = get_settings()
-        setup_logging(settings)
+        setup_logging(settings.log_level, settings.environment)
 
         # Get logger for testing
         logger = get_logger("test_logger")

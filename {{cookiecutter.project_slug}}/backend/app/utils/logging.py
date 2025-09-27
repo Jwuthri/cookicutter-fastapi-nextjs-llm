@@ -87,7 +87,8 @@ def get_local_env_loggers() -> Dict[str, Any]:
     return loggers
 
 
-def setup_logging(settings: Settings):
+
+def setup_logging(log_level: str = "INFO", environment: str = "development"):
     """Set up application logging with Rich for development and JSON for production."""
     global _logger
 
@@ -95,8 +96,8 @@ def setup_logging(settings: Settings):
     logs_dir = Path("logs")
     logs_dir.mkdir(exist_ok=True)
 
-    # Get log level from settings
-    log_level = settings.log_level.upper()
+    # Ensure log level is uppercase
+    log_level = log_level.upper()
 
     # Define logging configuration
     LOGGING_CONFIG = {
@@ -126,10 +127,10 @@ def setup_logging(settings: Settings):
                 "level": log_level,
                 "formatter": "console",
                 "rich_tracebacks": True,
-                "tracebacks_show_locals": settings.environment == "development",
+                "tracebacks_show_locals": environment == "development",
                 "show_time": True,
                 "show_level": True,
-                "show_path": settings.environment == "development",
+                "show_path": environment == "development",
             },
             "json_production": {
                 "class": "logging.StreamHandler",
@@ -139,7 +140,7 @@ def setup_logging(settings: Settings):
             },
             "file": {
                 "class": "logging.handlers.RotatingFileHandler",
-                "level": "DEBUG" if settings.environment == "development" else "INFO",
+                "level": "DEBUG" if environment == "development" else "INFO",
                 "formatter": "file",
                 "filename": "logs/app.log",
                 "maxBytes": 10 * 1024 * 1024,  # 10MB
