@@ -370,7 +370,7 @@ jobs:
     
     environment:
       name: staging
-      url: https://staging-api.{{cookiecutter.domain_name}}
+      url: https://staging-api.example.com
       
     steps:
       - uses: actions/checkout@v4
@@ -388,7 +388,7 @@ jobs:
         run: |
           echo "Running smoke tests against staging..."
           # Add smoke tests here
-          curl -f https://staging-api.{{cookiecutter.domain_name}}/api/v1/health/ || exit 1
+          curl -f https://staging-api.example.com/api/v1/health/ || exit 1
 
   deploy-production:
     runs-on: ubuntu-latest
@@ -397,7 +397,7 @@ jobs:
     
     environment:
       name: production
-      url: https://api.{{cookiecutter.domain_name}}
+      url: https://api.example.com
       
     steps:
       - uses: actions/checkout@v4
@@ -410,7 +410,7 @@ jobs:
       - name: Run production health checks
         run: |
           echo "Running production health checks..."
-          curl -f https://api.{{cookiecutter.domain_name}}/api/v1/health/ || exit 1
+          curl -f https://api.example.com/api/v1/health/ || exit 1
           
       - name: Notify deployment success
         run: |
