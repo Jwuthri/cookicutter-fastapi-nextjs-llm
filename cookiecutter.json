@@ -7,7 +7,7 @@
     "version": "0.1.0",
     "python_version": "3.11",
     "node_version": "18",
-    "use_websockets": ["yes", "no"],
+    "use_websockets": ["no", "yes"],
     "include_database": ["postgresql", "sqlite", "none"],
     "llm_provider": "openrouter",
     "default_model": ["gpt-4.1", "claude-4-sonnet", "gemini-2.5-pro", "custom"],
@@ -17,5 +17,26 @@
     "memory_type": ["vector", "redis", "hybrid", "in-memory"],
     "frontend_port": "3000",
     "backend_port": "8000",
-    "postgres_port": "5432"
+    "postgres_port": "5432",
+    "_copy_without_render": [
+        "*.js",
+        "*.jsx", 
+        "*.ts",
+        "*.tsx",
+        "*.json",
+        "*.css",
+        "*.scss",
+        "*.sass",
+        "*.less",
+        "*.svg",
+        "*.png",
+        "*.jpg",
+        "*.jpeg",
+        "*.gif",
+        "*.ico",
+        "*.woff",
+        "*.woff2",
+        "*.ttf",
+        "*.eot"
+    ]
 }
