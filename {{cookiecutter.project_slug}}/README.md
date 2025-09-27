@@ -88,8 +88,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ### 2. **Environment Setup**
 ```bash
 # Copy environment files
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env.local
+cp backend/.env.template backend/.env
+cp frontend/.env.template frontend/.env
 
 # Set your API keys in backend/.env
 OPENROUTER_API_KEY=your_openrouter_key_here
