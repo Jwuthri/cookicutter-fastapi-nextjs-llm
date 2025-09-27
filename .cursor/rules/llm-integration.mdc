@@ -90,17 +90,17 @@ class CustomChatService:
         self.llm_service = llm_service
         self.memory_store = memory_store
         self.settings = settings
-    
+
     async def process_message(self, message: str, session_id: str, user_id: str = None):
         # Get conversation context
         context = await self._get_conversation_context(session_id)
-        
+
         # Generate response using LLM
         response = await self._generate_response(message, context)
-        
+
         # Store conversation
         await self._store_conversation(session_id, message, response)
-        
+
         return {
             "message": response["content"],
             "session_id": session_id,
@@ -155,7 +155,7 @@ OPENROUTER_CONFIG = {
 
 ### Model Selection Guidelines
 - **Fast Responses**: Use GPT-4.1 mini or nano for quick responses
-- **Complex Reasoning**: Use GPT-4.1 or Anthropic Sonnet 4 for complex tasks  
+- **Complex Reasoning**: Use GPT-4.1 or Anthropic Sonnet 4 for complex tasks
 - **Code Generation**: Use specialized code models when available
 - **Cost Optimization**: Balance model capability with cost requirements
 
@@ -192,15 +192,15 @@ async def call_llm_with_retry(prompt: str, model: str):
 ### Prompt Templates
 ```python
 SYSTEM_PROMPTS = {
-    "helpful_assistant": """You are a helpful, harmless, and honest AI assistant. 
+    "helpful_assistant": """You are a helpful, harmless, and honest AI assistant.
     Provide accurate and helpful responses while being concise and clear.""",
-    
-    "code_assistant": """You are an expert software developer. 
-    Provide high-quality code solutions with explanations. 
+
+    "code_assistant": """You are an expert software developer.
+    Provide high-quality code solutions with explanations.
     Follow best practices and include error handling.""",
-    
-    "customer_support": """You are a customer support agent. 
-    Be empathetic, professional, and solution-oriented. 
+
+    "customer_support": """You are a customer support agent.
+    Be empathetic, professional, and solution-oriented.
     Escalate complex issues when necessary."""
 }
 ```
@@ -255,11 +255,11 @@ class MockLLMService:
     def __init__(self, responses: List[str] = None):
         self.responses = responses or ["Mock response"]
         self.call_count = 0
-    
+
     async def generate_completion(self, messages: list, **kwargs):
         response = self.responses[self.call_count % len(self.responses)]
         self.call_count += 1
-        
+
         return {
             "choices": [{
                 "message": {"role": "assistant", "content": response},

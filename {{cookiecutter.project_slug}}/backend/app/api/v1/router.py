@@ -2,9 +2,8 @@
 Main API v1 router for {{cookiecutter.project_name}}.
 """
 
+from app.api.v1 import auth, chat, completions, health, metrics, tasks
 from fastapi import APIRouter
-
-from app.api.v1 import auth, chat, completions, health, tasks, metrics
 
 api_router = APIRouter(prefix="/v1")
 

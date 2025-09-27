@@ -2,18 +2,16 @@
 Enhanced exception handling with context and tracing.
 """
 
-import sys
 import traceback
-from typing import Any, Dict, Optional, List, Union
 from datetime import datetime
-from uuid import uuid4
 from enum import Enum
+from typing import Any, Dict, List, Optional, Union
+from uuid import uuid4
 
+from app.utils.logging import get_logger
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-
-from app.utils.logging import get_logger
 
 logger = get_logger("exceptions")
 
@@ -71,7 +69,7 @@ class BaseAppException(Exception):
     """
     Enhanced base exception with context and structured error details.
     """
-    
+
     def __init__(
         self,
         message: str = "An error occurred",
@@ -90,7 +88,7 @@ class BaseAppException(Exception):
         self.category = category
         self.severity = severity
         self.retryable = retryable
-        
+
         # Process details
         self.details: List[ErrorDetail] = []
         if details:
@@ -101,14 +99,14 @@ class BaseAppException(Exception):
                     self.details.append(ErrorDetail(**detail))
                 else:
                     self.details.append(ErrorDetail(message=str(detail)))
-        
+
         # Error context
         self.context = ErrorContext(
             error_id=str(uuid4()),
             timestamp=datetime.utcnow(),
             additional_data=context or {}
         )
-        
+
         # Original cause
         self.cause = cause
         if cause:
@@ -118,17 +116,17 @@ class BaseAppException(Exception):
         else:
             # Capture current stack trace
             self.context.stack_trace = traceback.format_stack()[:-1]
-        
+
         super().__init__(self.message)
-    
+
     def add_detail(self, field: Optional[str], message: str, code: Optional[str] = None):
         """Add error detail."""
         self.details.append(ErrorDetail(field=field, message=message, code=code))
-    
+
     def add_context(self, key: str, value: Any):
         """Add context information."""
         self.context.additional_data[key] = value
-    
+
     def set_request_context(self, request: Request):
         """Set request context from FastAPI request."""
         self.context.request_id = getattr(request.state, "request_id", None)
@@ -136,29 +134,29 @@ class BaseAppException(Exception):
         self.context.method = request.method
         self.context.user_agent = request.headers.get("user-agent")
         self.context.client_ip = self._get_client_ip(request)
-        
+
         # Extract user context if available
         if hasattr(request.state, "user"):
             user = request.state.user
             self.context.user_id = getattr(user, "id", None)
-        
+
         # Extract session context if available
         if hasattr(request.state, "session_id"):
             self.context.session_id = request.state.session_id
-    
+
     def _get_client_ip(self, request: Request) -> str:
         """Extract client IP from request."""
         # Check forwarded headers
         forwarded_for = request.headers.get("x-forwarded-for")
         if forwarded_for:
             return forwarded_for.split(",")[0].strip()
-        
+
         real_ip = request.headers.get("x-real-ip")
         if real_ip:
             return real_ip
-        
+
         return request.client.host if request.client else "unknown"
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert exception to dictionary."""
         return {
@@ -179,7 +177,7 @@ class BaseAppException(Exception):
 
 class ValidationError(BaseAppException):
     """Input validation error."""
-    
+
     def __init__(self, message: str = "Validation error", field: Optional[str] = None, **kwargs):
         super().__init__(
             message=message,
@@ -194,7 +192,7 @@ class ValidationError(BaseAppException):
 
 class NotFoundError(BaseAppException):
     """Resource not found error."""
-    
+
     def __init__(self, message: str = "Resource not found", resource_type: Optional[str] = None, **kwargs):
         super().__init__(
             message=message,
@@ -209,7 +207,7 @@ class NotFoundError(BaseAppException):
 
 class ConflictError(BaseAppException):
     """Resource conflict error."""
-    
+
     def __init__(self, message: str = "Conflict", resource_id: Optional[str] = None, **kwargs):
         super().__init__(
             message=message,
@@ -224,7 +222,7 @@ class ConflictError(BaseAppException):
 
 class UnauthorizedError(BaseAppException):
     """Authentication required error."""
-    
+
     def __init__(self, message: str = "Authentication required", **kwargs):
         super().__init__(
             message=message,
@@ -237,7 +235,7 @@ class UnauthorizedError(BaseAppException):
 
 class ForbiddenError(BaseAppException):
     """Access forbidden error."""
-    
+
     def __init__(self, message: str = "Access forbidden", resource: Optional[str] = None, **kwargs):
         super().__init__(
             message=message,
@@ -252,7 +250,7 @@ class ForbiddenError(BaseAppException):
 
 class RateLimitError(BaseAppException):
     """Rate limit exceeded error."""
-    
+
     def __init__(self, message: str = "Rate limit exceeded", retry_after: Optional[int] = None, **kwargs):
         super().__init__(
             message=message,
@@ -268,7 +266,7 @@ class RateLimitError(BaseAppException):
 
 class ExternalServiceError(BaseAppException):
     """External service error."""
-    
+
     def __init__(self, message: str = "External service error", service: Optional[str] = None, **kwargs):
         super().__init__(
             message=message,
@@ -284,7 +282,7 @@ class ExternalServiceError(BaseAppException):
 
 class DatabaseError(BaseAppException):
     """Database operation error."""
-    
+
     def __init__(self, message: str = "Database error", operation: Optional[str] = None, **kwargs):
         super().__init__(
             message=message,
@@ -300,7 +298,7 @@ class DatabaseError(BaseAppException):
 
 class CacheError(BaseAppException):
     """Cache operation error."""
-    
+
     def __init__(self, message: str = "Cache error", operation: Optional[str] = None, **kwargs):
         super().__init__(
             message=message,
@@ -316,7 +314,7 @@ class CacheError(BaseAppException):
 
 class ConfigurationError(BaseAppException):
     """Configuration error."""
-    
+
     def __init__(self, message: str = "Configuration error", config_key: Optional[str] = None, **kwargs):
         super().__init__(
             message=message,
@@ -331,7 +329,7 @@ class ConfigurationError(BaseAppException):
 
 class BusinessLogicError(BaseAppException):
     """Business logic error."""
-    
+
     def __init__(self, message: str, business_rule: Optional[str] = None, **kwargs):
         super().__init__(
             message=message,
@@ -354,19 +352,19 @@ MessageQueueError = ExternalServiceError
 
 class ErrorTracker:
     """Track and aggregate errors for monitoring."""
-    
+
     def __init__(self):
         self.errors: List[BaseAppException] = []
         self.error_counts: Dict[str, int] = {}
-    
+
     def track_error(self, error: BaseAppException):
         """Track an error occurrence."""
         self.errors.append(error)
-        
+
         # Update counts
         error_key = f"{error.category}:{error.error_code}"
         self.error_counts[error_key] = self.error_counts.get(error_key, 0) + 1
-        
+
         # Log error with context
         log_data = {
             "error_id": error.context.error_id,
@@ -378,14 +376,14 @@ class ErrorTracker:
             "user_id": error.context.user_id,
             "endpoint": error.context.endpoint,
         }
-        
+
         if error.severity in [ErrorSeverity.HIGH, ErrorSeverity.CRITICAL]:
             logger.error(f"[{error.context.error_id}] {error.message}", extra=log_data)
         elif error.severity == ErrorSeverity.MEDIUM:
             logger.warning(f"[{error.context.error_id}] {error.message}", extra=log_data)
         else:
             logger.info(f"[{error.context.error_id}] {error.message}", extra=log_data)
-    
+
     def get_error_stats(self) -> Dict[str, Any]:
         """Get error statistics."""
         return {
@@ -419,20 +417,20 @@ async def base_app_exception_handler(request: Request, exc: BaseAppException) ->
     """Handle application exceptions with full context."""
     # Set request context
     exc.set_request_context(request)
-    
+
     # Track error
     _error_tracker.track_error(exc)
-    
+
     # Create response
     error_response = exc.to_dict()
-    
+
     # Add trace information for debugging (not in production)
     if exc.severity in [ErrorSeverity.HIGH, ErrorSeverity.CRITICAL]:
         from app.config import get_settings
         settings = get_settings()
         if not settings.is_production() or settings.debug:
             error_response["trace"] = exc.context.stack_trace
-    
+
     return JSONResponse(
         status_code=exc.status_code,
         content=error_response,
@@ -447,13 +445,13 @@ async def validation_exception_handler(request: Request, exc: Exception) -> JSON
         cause=exc
     )
     validation_error.set_request_context(request)
-    
+
     # Extract validation details if available
     if hasattr(exc, "errors"):
         for error in exc.errors():
             field = ".".join(str(loc) for loc in error.get("loc", []))
             validation_error.add_detail(field, error.get("msg", "Validation error"))
-    
+
     return await base_app_exception_handler(request, validation_error)
 
 
@@ -467,7 +465,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
         severity=ErrorSeverity.MEDIUM
     )
     app_exception.set_request_context(request)
-    
+
     return await base_app_exception_handler(request, app_exception)
 
 
@@ -482,7 +480,7 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
         cause=exc
     )
     system_error.set_request_context(request)
-    
+
     return await base_app_exception_handler(request, system_error)
 
 
@@ -490,11 +488,11 @@ def setup_enhanced_exception_handlers(app):
     """Set up enhanced exception handlers."""
     from fastapi.exceptions import RequestValidationError
     from pydantic import ValidationError as PydanticValidationError
-    
+
     app.add_exception_handler(BaseAppException, base_app_exception_handler)
     app.add_exception_handler(HTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(PydanticValidationError, validation_exception_handler)
     app.add_exception_handler(Exception, general_exception_handler)
-    
+
     logger.info("Enhanced exception handlers registered")

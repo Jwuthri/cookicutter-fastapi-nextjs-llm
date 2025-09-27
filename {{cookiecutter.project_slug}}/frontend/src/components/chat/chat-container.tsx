@@ -14,7 +14,7 @@ export function ChatContainer() {
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  
+
   const { messages, sendMessage } = useChat()
 
   const scrollToBottom = () => {
@@ -62,7 +62,7 @@ export function ChatContainer() {
             <span>AI Chat</span>
           </div>
         </div>
-        
+
         <div className="flex items-center space-x-4">
           <button className="p-2 text-white/60 hover:text-white transition-colors rounded-lg hover:bg-white/10">
             <History className="w-5 h-5" />
@@ -94,7 +94,7 @@ export function ChatContainer() {
                 <p className="text-white/70 mb-8 max-w-md mx-auto">
                   Start a conversation with AI. Ask questions, get help, or just chat about anything.
                 </p>
-                
+
                 {/* Example prompts */}
                 <div className="grid md:grid-cols-2 gap-4 max-w-2xl mx-auto">
                   <motion.button
@@ -108,7 +108,7 @@ export function ChatContainer() {
                       Explain quantum computing in simple terms
                     </div>
                   </motion.button>
-                  
+
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -120,7 +120,7 @@ export function ChatContainer() {
                       Help me write a professional email
                     </div>
                   </motion.button>
-                  
+
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -132,7 +132,7 @@ export function ChatContainer() {
                       What are the latest trends in web development?
                     </div>
                   </motion.button>
-                  
+
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -209,7 +209,7 @@ export function ChatContainer() {
                     </button>
                   )}
                 </div>
-                
+
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -220,7 +220,7 @@ export function ChatContainer() {
                   <Send className="w-5 h-5" />
                 </motion.button>
               </div>
-              
+
               {/* Hint */}
               <div className="mt-2 text-xs text-white/40 flex items-center justify-between">
                 <span>Press Enter to send, Shift+Enter for new line</span>

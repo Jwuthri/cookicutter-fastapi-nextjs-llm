@@ -6,10 +6,10 @@ import { authMiddleware } from "@clerk/nextjs";
 export default authMiddleware({
   // Public routes that don't require authentication
   publicRoutes: ["/", "/sign-in", "/sign-up", "/api/health"],
-  
+
   // Routes that should be accessible while signed out
   ignoredRoutes: ["/api/health"],
-  
+
   // Protect all other routes by default
   // Users will be redirected to sign-in if not authenticated
 });

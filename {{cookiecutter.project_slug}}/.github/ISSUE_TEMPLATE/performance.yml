@@ -8,9 +8,9 @@ body:
     attributes:
       value: |
         ## ⚡ Performance Issue
-        
+
         Help us optimize {{cookiecutter.project_name}}! Report slow performance, high resource usage, or suggest optimizations.
-        
+
         ---
 
   - type: dropdown

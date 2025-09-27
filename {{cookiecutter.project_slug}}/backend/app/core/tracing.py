@@ -6,31 +6,29 @@ with support for multiple exporters (Jaeger, Zipkin, OTLP) and automatic instrum
 """
 
 import os
-import logging
-from typing import Dict, Any, Optional
 from contextlib import contextmanager
+from typing import Any, Dict, Optional
 
-from opentelemetry import trace, baggage, context
+from app.core.config.settings import Settings
+from app.utils.logging import get_logger
+from opentelemetry import baggage, context, trace
+
+# Exporters
+from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.exporter.zipkin.json import ZipkinExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.instrumentation.redis import RedisInstrumentor
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     ConsoleSpanExporter,
     SimpleSpanProcessor,
 )
-from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from opentelemetry.instrumentation.redis import RedisInstrumentor
-from opentelemetry.instrumentation.requests import RequestsInstrumentor
-from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-
-# Exporters
-from opentelemetry.exporter.jaeger.thrift import JaegerExporter
-from opentelemetry.exporter.zipkin.json import ZipkinExporter
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-
-from app.utils.logging import get_logger
-from app.core.config.settings import Settings
 
 logger = get_logger("tracing")
 
@@ -40,13 +38,13 @@ tracer: Optional[trace.Tracer] = None
 
 class TracingConfig:
     """Tracing configuration and setup."""
-    
+
     def __init__(self, settings: Settings):
         self.settings = settings
         self.service_name = settings.app_name.lower().replace(" ", "-")
         self.service_version = settings.app_version
         self.environment = settings.environment
-        
+
         # Tracing settings from environment
         self.enabled = os.getenv("ENABLE_TRACING", "false").lower() == "true"
         self.exporter_type = os.getenv("TRACING_EXPORTER", "console").lower()
@@ -54,7 +52,7 @@ class TracingConfig:
         self.zipkin_endpoint = os.getenv("ZIPKIN_ENDPOINT", "http://localhost:9411/api/v2/spans")
         self.otlp_endpoint = os.getenv("OTLP_ENDPOINT", "http://localhost:4317")
         self.sample_rate = float(os.getenv("TRACING_SAMPLE_RATE", "1.0"))
-        
+
         # Custom span attributes
         self.default_attributes = {
             "service.name": self.service_name,
@@ -62,18 +60,18 @@ class TracingConfig:
             "deployment.environment": self.environment,
             "service.instance.id": os.getenv("HOSTNAME", "unknown"),
         }
-    
+
     def setup_tracing(self) -> bool:
         """
         Set up distributed tracing with OpenTelemetry.
-        
+
         Returns:
             bool: True if tracing was successfully configured, False otherwise.
         """
         if not self.enabled:
             logger.info("Distributed tracing is disabled")
             return False
-        
+
         try:
             # Create resource with service information
             resource = Resource.create({
@@ -82,32 +80,32 @@ class TracingConfig:
                 "deployment.environment": self.environment,
                 "service.instance.id": os.getenv("HOSTNAME", "unknown"),
             })
-            
+
             # Set up tracer provider
             tracer_provider = TracerProvider(resource=resource)
-            
+
             # Configure span processor and exporter
             span_processor = self._create_span_processor()
             if span_processor:
                 tracer_provider.add_span_processor(span_processor)
-            
+
             # Set global tracer provider
             trace.set_tracer_provider(tracer_provider)
-            
+
             # Get global tracer
             global tracer
             tracer = trace.get_tracer(__name__)
-            
+
             logger.info(
                 f"Distributed tracing initialized with {self.exporter_type} exporter, "
                 f"service: {self.service_name}, version: {self.service_version}"
             )
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize distributed tracing: {e}")
             return False
-    
+
     def _create_span_processor(self) -> Optional[BatchSpanProcessor]:
         """Create appropriate span processor based on exporter type."""
         try:
@@ -117,38 +115,38 @@ class TracingConfig:
                     max_tag_value_length=1024,
                 )
                 return BatchSpanProcessor(exporter)
-            
+
             elif self.exporter_type == "zipkin":
                 exporter = ZipkinExporter(
                     endpoint=self.zipkin_endpoint,
                     timeout=10,
                 )
                 return BatchSpanProcessor(exporter)
-            
+
             elif self.exporter_type == "otlp":
                 exporter = OTLPSpanExporter(
                     endpoint=self.otlp_endpoint,
                     timeout=10,
                 )
                 return BatchSpanProcessor(exporter)
-            
+
             elif self.exporter_type == "console":
                 exporter = ConsoleSpanExporter()
                 return SimpleSpanProcessor(exporter)
-            
+
             else:
                 logger.warning(f"Unknown exporter type: {self.exporter_type}")
                 return None
-                
+
         except Exception as e:
             logger.error(f"Failed to create span processor: {e}")
             return None
-    
+
     def instrument_app(self, app):
         """Instrument FastAPI app and other services."""
         if not self.enabled:
             return
-        
+
         try:
             # Instrument FastAPI
             FastAPIInstrumentor.instrument_app(
@@ -156,28 +154,28 @@ class TracingConfig:
                 tracer_provider=trace.get_tracer_provider(),
                 excluded_urls="health,metrics,docs,redoc,openapi.json",
             )
-            
+
             # Instrument SQLAlchemy
             SQLAlchemyInstrumentor().instrument(
                 tracer_provider=trace.get_tracer_provider(),
             )
-            
+
             # Instrument Redis
             RedisInstrumentor().instrument(
                 tracer_provider=trace.get_tracer_provider(),
             )
-            
+
             # Instrument HTTP clients
             RequestsInstrumentor().instrument(
                 tracer_provider=trace.get_tracer_provider(),
             )
-            
+
             HTTPXClientInstrumentor().instrument(
                 tracer_provider=trace.get_tracer_provider(),
             )
-            
+
             logger.info("Auto-instrumentation enabled for FastAPI, SQLAlchemy, Redis, and HTTP clients")
-            
+
         except Exception as e:
             logger.error(f"Failed to instrument services: {e}")
 
@@ -195,17 +193,17 @@ def get_tracer() -> trace.Tracer:
 def trace_operation(operation_name: str, attributes: Optional[Dict[str, Any]] = None):
     """
     Context manager for tracing operations.
-    
+
     Args:
         operation_name: Name of the operation being traced
         attributes: Additional attributes to add to the span
-        
+
     Example:
         with trace_operation("database_query", {"table": "users", "action": "select"}):
             result = await db.query(User).all()
     """
     tracer = get_tracer()
-    
+
     with tracer.start_as_current_span(operation_name) as span:
         try:
             # Add default attributes
@@ -213,14 +211,14 @@ def trace_operation(operation_name: str, attributes: Optional[Dict[str, Any]] = 
                 "operation.name": operation_name,
                 "service.name": os.getenv("SERVICE_NAME", "{{cookiecutter.project_slug}}"),
             })
-            
+
             # Add custom attributes
             if attributes:
                 for key, value in attributes.items():
                     span.set_attribute(key, str(value))
-            
+
             yield span
-            
+
         except Exception as e:
             span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
             span.record_exception(e)
@@ -230,11 +228,11 @@ def trace_operation(operation_name: str, attributes: Optional[Dict[str, Any]] = 
 def trace_async_function(operation_name: Optional[str] = None, attributes: Optional[Dict[str, Any]] = None):
     """
     Decorator for tracing async functions.
-    
+
     Args:
         operation_name: Custom operation name (defaults to function name)
         attributes: Additional attributes to add to the span
-        
+
     Example:
         @trace_async_function("user_creation", {"component": "auth"})
         async def create_user(user_data: dict):
@@ -243,31 +241,31 @@ def trace_async_function(operation_name: Optional[str] = None, attributes: Optio
     def decorator(func):
         async def wrapper(*args, **kwargs):
             op_name = operation_name or f"{func.__module__}.{func.__name__}"
-            
+
             with trace_operation(op_name, attributes) as span:
                 # Add function details
                 span.set_attributes({
                     "function.name": func.__name__,
                     "function.module": func.__module__,
                 })
-                
+
                 return await func(*args, **kwargs)
-        
+
         wrapper.__name__ = func.__name__
         wrapper.__doc__ = func.__doc__
         return wrapper
-    
+
     return decorator
 
 
 def trace_sync_function(operation_name: Optional[str] = None, attributes: Optional[Dict[str, Any]] = None):
     """
     Decorator for tracing sync functions.
-    
+
     Args:
         operation_name: Custom operation name (defaults to function name)
         attributes: Additional attributes to add to the span
-        
+
     Example:
         @trace_sync_function("password_validation", {"component": "auth"})
         def validate_password(password: str) -> bool:
@@ -276,20 +274,20 @@ def trace_sync_function(operation_name: Optional[str] = None, attributes: Option
     def decorator(func):
         def wrapper(*args, **kwargs):
             op_name = operation_name or f"{func.__module__}.{func.__name__}"
-            
+
             with trace_operation(op_name, attributes) as span:
                 # Add function details
                 span.set_attributes({
                     "function.name": func.__name__,
                     "function.module": func.__module__,
                 })
-                
+
                 return func(*args, **kwargs)
-        
+
         wrapper.__name__ = func.__name__
         wrapper.__doc__ = func.__doc__
         return wrapper
-    
+
     return decorator
 
 
@@ -342,15 +340,15 @@ tracing_config: Optional[TracingConfig] = None
 def initialize_tracing(settings: Settings) -> bool:
     """
     Initialize distributed tracing system.
-    
+
     Args:
         settings: Application settings
-        
+
     Returns:
         bool: True if tracing was successfully initialized
     """
     global tracing_config
-    
+
     tracing_config = TracingConfig(settings)
     return tracing_config.setup_tracing()
 
@@ -358,11 +356,11 @@ def initialize_tracing(settings: Settings) -> bool:
 def instrument_fastapi_app(app, settings: Settings):
     """Instrument FastAPI app with distributed tracing."""
     global tracing_config
-    
+
     if tracing_config is None:
         tracing_config = TracingConfig(settings)
         tracing_config.setup_tracing()
-    
+
     tracing_config.instrument_app(app)
 
 

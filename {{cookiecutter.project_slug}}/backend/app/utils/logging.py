@@ -9,14 +9,13 @@ import logging.handlers
 import os
 import sys
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
+from app.config import Settings
+from pythonjsonlogger import jsonlogger
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.traceback import install as install_rich_traceback
-from pythonjsonlogger import jsonlogger
-
-from app.config import Settings, get_settings
 
 # Global rich console instance
 console = Console()
@@ -30,12 +29,12 @@ _logger: Optional[logging.Logger] = None
 
 class RichCustomFormatter(logging.Formatter):
     """Custom formatter that integrates Rich with standard logging."""
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.rich_handler = RichHandler(
-            rich_tracebacks=True, 
-            tracebacks_suppress=[], 
+            rich_tracebacks=True,
+            tracebacks_suppress=[],
             tracebacks_show_locals=True
         )
 
@@ -45,17 +44,17 @@ class RichCustomFormatter(logging.Formatter):
 
 class JsonFormatter(jsonlogger.JsonFormatter):
     """Custom JSON formatter for production logging with DataDog integration."""
-    
+
     def add_fields(self, log_record, record, message_dict):
         super().add_fields(log_record, record, message_dict)
-        
+
         # Add DataDog fields
         log_record['dd.service'] = getattr(record, 'dd.service', os.getenv('DD_SERVICE', '{{cookiecutter.project_slug}}'))
         log_record['dd.env'] = getattr(record, 'dd.env', os.getenv('DD_ENV', 'production'))
         log_record['dd.version'] = getattr(record, 'dd.version', os.getenv('DD_VERSION', '{{cookiecutter.version}}'))
         log_record['dd.trace_id'] = getattr(record, 'dd.trace_id', '0')
         log_record['dd.span_id'] = getattr(record, 'dd.span_id', '0')
-        
+
         # Add extra context
         log_record['service'] = '{{cookiecutter.project_slug}}'
         log_record['environment'] = os.getenv('ENVIRONMENT', 'production')
@@ -64,7 +63,7 @@ class JsonFormatter(jsonlogger.JsonFormatter):
 def get_handlers() -> List[str]:
     """Get appropriate handlers based on environment."""
     environment = os.getenv('ENVIRONMENT', 'production').lower()
-    
+
     if environment in ['production', 'staging']:
         return ['json_production', 'file']
     else:
@@ -74,9 +73,9 @@ def get_handlers() -> List[str]:
 def get_local_env_loggers() -> Dict[str, Any]:
     """Get environment-specific logger configuration."""
     environment = os.getenv('ENVIRONMENT', 'production').lower()
-    
+
     loggers = {}
-    
+
     # Suppress noisy loggers in production
     if environment == 'production':
         loggers.update({
@@ -84,21 +83,21 @@ def get_local_env_loggers() -> Dict[str, Any]:
             'asyncio': {'level': 'WARNING'},
             'httpx': {'level': 'INFO'},
         })
-    
+
     return loggers
 
 
 def setup_logging(settings: Settings):
     """Set up application logging with Rich for development and JSON for production."""
     global _logger
-    
+
     # Create logs directory if it doesn't exist
     logs_dir = Path("logs")
     logs_dir.mkdir(exist_ok=True)
-    
+
     # Get log level from settings
     log_level = settings.log_level.upper()
-    
+
     # Define logging configuration
     LOGGING_CONFIG = {
         "version": 1,
@@ -175,16 +174,16 @@ def setup_logging(settings: Settings):
             "fastapi": {"level": "INFO"},
         }
     }
-    
+
     # Add environment-specific logger configuration
     LOGGING_CONFIG["loggers"].update(get_local_env_loggers())
-    
+
     # Capture warnings
     logging.captureWarnings(True)
-    
+
     # Apply configuration
     logging.config.dictConfig(LOGGING_CONFIG)
-    
+
     # Set global logger
     _logger = logging.getLogger("app")
 
@@ -192,15 +191,15 @@ def setup_logging(settings: Settings):
 def setup_cli_logging(level: str = "INFO", verbose: bool = False):
     """Set up logging specifically for CLI operations."""
     global _logger
-    
+
     # Create logs directory if it doesn't exist
     logs_dir = Path("logs")
     logs_dir.mkdir(exist_ok=True)
-    
+
     # Determine log level
     if verbose:
         level = "DEBUG"
-    
+
     # CLI-specific logging configuration
     CLI_LOGGING_CONFIG = {
         "version": 1,
@@ -249,10 +248,10 @@ def setup_cli_logging(level: str = "INFO", verbose: bool = False):
             },
         }
     }
-    
+
     # Apply CLI configuration
     logging.config.dictConfig(CLI_LOGGING_CONFIG)
-    
+
     # Set global logger
     _logger = logging.getLogger("cli")
 

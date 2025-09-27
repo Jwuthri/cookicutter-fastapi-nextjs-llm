@@ -39,19 +39,19 @@ body {
   .chat-message {
     @apply p-4 rounded-lg mb-4 max-w-[80%] break-words;
   }
-  
+
   .chat-message.user {
     @apply bg-blue-500 text-white ml-auto;
   }
-  
+
   .chat-message.assistant {
     @apply bg-gray-100 text-gray-900 mr-auto dark:bg-gray-800 dark:text-gray-100;
   }
-  
+
   .typing-dots {
     @apply flex space-x-1;
   }
-  
+
   .typing-dot {
     @apply w-2 h-2 bg-gray-500 rounded-full animate-pulse;
   }

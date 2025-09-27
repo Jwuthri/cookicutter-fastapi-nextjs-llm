@@ -2,14 +2,17 @@
 API-specific dependencies for {{cookiecutter.project_name}}.
 """
 
-from fastapi import Depends, HTTPException, status, Header
 from typing import Optional
 
 from app.config import Settings, get_settings
-from app.dependencies import get_redis_client, get_memory_store, get_llm_service, get_chat_service, get_conversation_service
-from app.services.conversation_service import ConversationService
 from app.core.security.rate_limit import RateLimiter
-from app.core.memory.base import MemoryInterface
+from app.dependencies import (
+    get_chat_service,
+    get_conversation_service,
+    get_redis_client,
+)
+from app.services.conversation_service import ConversationService
+from fastapi import Depends, Header, HTTPException, status
 
 
 # Use DI container services directly
@@ -65,17 +68,17 @@ async def verify_api_key(
     """Verify API key if provided (optional authentication)."""
     if not x_api_key:
         return None
-    
+
     # In production, verify against a database or service
     # For now, just check against a setting
     valid_api_keys = getattr(settings, "api_keys", [])
-    
+
     if valid_api_keys and x_api_key not in valid_api_keys:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid API key"
         )
-    
+
     return x_api_key
 
 
@@ -99,12 +102,12 @@ def validate_session_id(session_id: str) -> str:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid session ID format"
         )
-    
+
     # Basic format validation (alphanumeric + hyphens/underscores)
     if not all(c.isalnum() or c in "-_" for c in session_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Session ID contains invalid characters"
         )
-    
+
     return session_id

@@ -6,42 +6,33 @@ For backward compatibility, it re-exports the enhanced exception system from cor
 """
 
 # Import enhanced exception system
-from app.core.exceptions import (
-    # Base classes
+from app.core.exceptions import (  # Base classes; Specific exceptions; Legacy aliases; Utilities; Exception handlers
     BaseAppException,
-    ErrorSeverity,
-    ErrorCategory,
-    ErrorDetail,
-    ErrorContext,
-    
-    # Specific exceptions
-    ValidationError,
-    NotFoundError,
-    ConflictError,
-    UnauthorizedError,
-    ForbiddenError,
-    RateLimitError,
-    ExternalServiceError,
-    DatabaseError,
+    BusinessLogicError,
     CacheError,
     ConfigurationError,
-    BusinessLogicError,
-    
-    # Legacy aliases
-    LLMError,
-    ServiceUnavailableError,
-    MessageQueueError,
-    
-    # Utilities
+    ConflictError,
+    DatabaseError,
+    ErrorCategory,
+    ErrorContext,
+    ErrorDetail,
+    ErrorSeverity,
     ErrorTracker,
-    get_error_tracker,
-    
-    # Exception handlers
+    ExternalServiceError,
+    ForbiddenError,
+    LLMError,
+    MessageQueueError,
+    NotFoundError,
+    RateLimitError,
+    ServiceUnavailableError,
+    UnauthorizedError,
+    ValidationError,
     base_app_exception_handler,
-    validation_exception_handler,
-    http_exception_handler,
     general_exception_handler,
-    setup_enhanced_exception_handlers
+    get_error_tracker,
+    http_exception_handler,
+    setup_enhanced_exception_handlers,
+    validation_exception_handler,
 )
 
 from .utils.logging import get_logger

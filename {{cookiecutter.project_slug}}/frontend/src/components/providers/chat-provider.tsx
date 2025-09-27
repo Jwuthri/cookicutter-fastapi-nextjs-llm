@@ -1,35 +1,38 @@
-'use client'
+"use client";
 
-import React, { createContext, useContext, useReducer, useEffect } from 'react'
-import { useAuth } from '@clerk/nextjs'
-import { Message } from '@/types/chat'
-import { createApiClient } from '@/lib/api'
+import React, { createContext, useContext, useReducer, useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { Message } from "@/types/chat";
+import { createApiClient } from "@/lib/api";
 
 interface ChatState {
-  messages: Message[]
-  isLoading: boolean
-  error: string | null
-  sessionId: string | null
-  isConnected: boolean
+  messages: Message[];
+  isLoading: boolean;
+  error: string | null;
+  sessionId: string | null;
+  isConnected: boolean;
 }
 
 type ChatAction =
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'ADD_MESSAGE'; payload: Message }
-  | { type: 'UPDATE_MESSAGE'; payload: { id: string; updates: Partial<Message> } }
-  | { type: 'SET_MESSAGES'; payload: Message[] }
-  | { type: 'CLEAR_MESSAGES' }
-  | { type: 'SET_SESSION_ID'; payload: string }
-  | { type: 'SET_CONNECTED'; payload: boolean }
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "ADD_MESSAGE"; payload: Message }
+  | {
+      type: "UPDATE_MESSAGE";
+      payload: { id: string; updates: Partial<Message> };
+    }
+  | { type: "SET_MESSAGES"; payload: Message[] }
+  | { type: "CLEAR_MESSAGES" }
+  | { type: "SET_SESSION_ID"; payload: string }
+  | { type: "SET_CONNECTED"; payload: boolean };
 
 interface ChatContextType extends ChatState {
-  sendMessage: (content: string) => Promise<void>
-  clearChat: () => void
-  loadSession: (sessionId: string) => Promise<void>
+  sendMessage: (content: string) => Promise<void>;
+  clearChat: () => void;
+  loadSession: (sessionId: string) => Promise<void>;
 }
 
-const ChatContext = createContext<ChatContextType | undefined>(undefined)
+const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 const initialState: ChatState = {
   messages: [],
@@ -37,139 +40,143 @@ const initialState: ChatState = {
   error: null,
   sessionId: null,
   isConnected: true,
-}
+};
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
-    case 'SET_LOADING':
-      return { ...state, isLoading: action.payload }
-    case 'SET_ERROR':
-      return { ...state, error: action.payload }
-    case 'ADD_MESSAGE':
-      return { ...state, messages: [...state.messages, action.payload] }
-    case 'UPDATE_MESSAGE':
+    case "SET_LOADING":
+      return { ...state, isLoading: action.payload };
+    case "SET_ERROR":
+      return { ...state, error: action.payload };
+    case "ADD_MESSAGE":
+      return { ...state, messages: [...state.messages, action.payload] };
+    case "UPDATE_MESSAGE":
       return {
         ...state,
-        messages: state.messages.map(msg =>
-          msg.id === action.payload.id ? { ...msg, ...action.payload.updates } : msg
+        messages: state.messages.map((msg) =>
+          msg.id === action.payload.id
+            ? { ...msg, ...action.payload.updates }
+            : msg,
         ),
-      }
-    case 'SET_MESSAGES':
-      return { ...state, messages: action.payload }
-    case 'CLEAR_MESSAGES':
-      return { ...state, messages: [] }
-    case 'SET_SESSION_ID':
-      return { ...state, sessionId: action.payload }
-    case 'SET_CONNECTED':
-      return { ...state, isConnected: action.payload }
+      };
+    case "SET_MESSAGES":
+      return { ...state, messages: action.payload };
+    case "CLEAR_MESSAGES":
+      return { ...state, messages: [] };
+    case "SET_SESSION_ID":
+      return { ...state, sessionId: action.payload };
+    case "SET_CONNECTED":
+      return { ...state, isConnected: action.payload };
     default:
-      return state
+      return state;
   }
 }
 
 export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
-  const [state, dispatch] = useReducer(chatReducer, initialState)
-  const { getToken } = useAuth()
+  const [state, dispatch] = useReducer(chatReducer, initialState);
+  const { getToken } = useAuth();
 
   // Generate session ID on mount
   useEffect(() => {
-    const sessionId = Math.random().toString(36).substring(2, 15)
-    dispatch({ type: 'SET_SESSION_ID', payload: sessionId })
-  }, [])
+    const sessionId = Math.random().toString(36).substring(2, 15);
+    dispatch({ type: "SET_SESSION_ID", payload: sessionId });
+  }, []);
 
   const getApiClient = async () => {
-    const token = await getToken()
-    return createApiClient(token)
-  }
+    const token = await getToken();
+    return createApiClient(token);
+  };
 
   const sendMessage = async (content: string) => {
-    if (!content.trim()) return
+    if (!content.trim()) return;
 
     const userMessage: Message = {
       id: Math.random().toString(36).substring(2, 15),
       content: content.trim(),
-      role: 'user',
+      role: "user",
       timestamp: new Date().toISOString(),
-    }
+    };
 
     // Add user message immediately
-    dispatch({ type: 'ADD_MESSAGE', payload: userMessage })
-    dispatch({ type: 'SET_LOADING', payload: true })
-    dispatch({ type: 'SET_ERROR', payload: null })
+    dispatch({ type: "ADD_MESSAGE", payload: userMessage });
+    dispatch({ type: "SET_LOADING", payload: true });
+    dispatch({ type: "SET_ERROR", payload: null });
 
     try {
-      const apiClient = await getApiClient()
+      const apiClient = await getApiClient();
       const response = await apiClient.sendMessage({
         message: content,
         session_id: state.sessionId || undefined,
-      })
+      });
 
       const assistantMessage: Message = {
         id: response.message_id,
         content: response.message,
-        role: 'assistant',
+        role: "assistant",
         timestamp: response.timestamp,
-      }
+      };
 
-      dispatch({ type: 'ADD_MESSAGE', payload: assistantMessage })
+      dispatch({ type: "ADD_MESSAGE", payload: assistantMessage });
 
       // Update session ID if it was generated by the backend
       if (response.session_id && response.session_id !== state.sessionId) {
-        dispatch({ type: 'SET_SESSION_ID', payload: response.session_id })
+        dispatch({ type: "SET_SESSION_ID", payload: response.session_id });
       }
     } catch (error) {
-      console.error('Failed to send message:', error)
-      
+      console.error("Failed to send message:", error);
+
       // Mark user message as failed
       dispatch({
-        type: 'UPDATE_MESSAGE',
+        type: "UPDATE_MESSAGE",
         payload: { id: userMessage.id, updates: { error: true } },
-      })
+      });
 
       dispatch({
-        type: 'SET_ERROR',
-        payload: error instanceof Error ? error.message : 'Failed to send message',
-      })
+        type: "SET_ERROR",
+        payload:
+          error instanceof Error ? error.message : "Failed to send message",
+      });
     } finally {
-      dispatch({ type: 'SET_LOADING', payload: false })
+      dispatch({ type: "SET_LOADING", payload: false });
     }
-  }
+  };
 
   const clearChat = () => {
-    dispatch({ type: 'CLEAR_MESSAGES' })
-    dispatch({ type: 'SET_ERROR', payload: null })
-    
+    dispatch({ type: "CLEAR_MESSAGES" });
+    dispatch({ type: "SET_ERROR", payload: null });
+
     // Generate new session ID
-    const sessionId = Math.random().toString(36).substring(2, 15)
-    dispatch({ type: 'SET_SESSION_ID', payload: sessionId })
-  }
+    const sessionId = Math.random().toString(36).substring(2, 15);
+    dispatch({ type: "SET_SESSION_ID", payload: sessionId });
+  };
 
   const loadSession = async (sessionId: string) => {
-    dispatch({ type: 'SET_LOADING', payload: true })
-    dispatch({ type: 'SET_ERROR', payload: null })
+    dispatch({ type: "SET_LOADING", payload: true });
+    dispatch({ type: "SET_ERROR", payload: null });
 
     try {
-      const apiClient = await getApiClient()
-      const sessionData = await apiClient.getSession(sessionId)
+      const apiClient = await getApiClient();
+      const sessionData = await apiClient.getSession(sessionId);
       const messages: Message[] = sessionData.messages.map((msg: any) => ({
         id: msg.id,
         content: msg.content,
         role: msg.role,
         timestamp: msg.timestamp,
-      }))
+      }));
 
-      dispatch({ type: 'SET_MESSAGES', payload: messages })
-      dispatch({ type: 'SET_SESSION_ID', payload: sessionId })
+      dispatch({ type: "SET_MESSAGES", payload: messages });
+      dispatch({ type: "SET_SESSION_ID", payload: sessionId });
     } catch (error) {
-      console.error('Failed to load session:', error)
+      console.error("Failed to load session:", error);
       dispatch({
-        type: 'SET_ERROR',
-        payload: error instanceof Error ? error.message : 'Failed to load session',
-      })
+        type: "SET_ERROR",
+        payload:
+          error instanceof Error ? error.message : "Failed to load session",
+      });
     } finally {
-      dispatch({ type: 'SET_LOADING', payload: false })
+      dispatch({ type: "SET_LOADING", payload: false });
     }
-  }
+  };
 
   return (
     <ChatContext.Provider
@@ -182,13 +189,13 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     >
       {children}
     </ChatContext.Provider>
-  )
-}
+  );
+};
 
 export const useChat = () => {
-  const context = useContext(ChatContext)
+  const context = useContext(ChatContext);
   if (!context) {
-    throw new Error('useChat must be used within a ChatProvider')
+    throw new Error("useChat must be used within a ChatProvider");
   }
-  return context
-}
+  return context;
+};

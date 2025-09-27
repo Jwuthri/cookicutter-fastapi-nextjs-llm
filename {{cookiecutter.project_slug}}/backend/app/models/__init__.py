@@ -2,27 +2,27 @@
 Pydantic models for {{cookiecutter.project_name}}.
 """
 
+from .api_key import *
+from .base import *
 from .chat import *
 from .completion import *
-from .base import *
-from .user import *
-from .api_key import *
 from .task import *
+from .user import *
 
 __all__ = [
     # Chat models
     "ChatMessage",
-    "ChatRequest", 
+    "ChatRequest",
     "ChatResponse",
     "ChatSession",
     "MessageHistory",
     # Completion models
     "CompletionRequest",
-    "CompletionResponse", 
+    "CompletionResponse",
     "StreamingCompletionResponse",
     # User models
     "UserProfile",
-    "UserPublicProfile", 
+    "UserPublicProfile",
     "UserRegistrationRequest",
     "UserLoginRequest",
     "UserUpdateRequest",

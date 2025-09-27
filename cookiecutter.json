@@ -21,7 +21,7 @@
     "postgres_port": "5432",
     "_copy_without_render": [
         "*.js",
-        "*.jsx", 
+        "*.jsx",
         "*.ts",
         "*.tsx",
         "*.json",
@@ -39,6 +39,12 @@
         "*.woff2",
         "*.ttf",
         "*.eot",
-        "*.sh"
+        "backend/scripts/*.sh",
+        ".pre-commit-config.yaml",
+        ".secrets.baseline",
+        "docker-compose.yml",
+        "backend/docker/docker-compose.yml",
+        "backend/docker/docker-compose.dev.yml",
+        "backend/pyproject.toml"
     ]
 }

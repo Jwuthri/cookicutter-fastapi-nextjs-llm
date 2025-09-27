@@ -2,12 +2,11 @@
 Agno Context Management - How Agno handles context windows automatically.
 """
 
-from typing import Dict, Any, List, Optional
-from datetime import datetime
+from typing import Any, Dict
 
 try:
     from agno import Agent
-    from agno.memory import ChatMemory, VectorMemory, HybridMemory
+    from agno.memory import ChatMemory, HybridMemory, VectorMemory
     from agno.models.openrouter import OpenRouter
     AGNO_AVAILABLE = True
 except ImportError:
@@ -21,29 +20,29 @@ logger = get_logger("agno_context_manager")
 class AgnoContextManager:
     """
     Demonstrates how Agno handles context window management automatically.
-    
+
     Agno provides several built-in strategies for managing context limits:
     1. Automatic memory compression
     2. Sliding window with retrieval
     3. Intelligent summarization
     4. Vector-based context selection
     """
-    
+
     def __init__(self, model_name: str, api_key: str):
         if not AGNO_AVAILABLE:
             raise ImportError("Agno package required")
-        
+
         self.model_name = model_name
         self.api_key = api_key
-        
+
         # Create agent with different memory strategies
         self.agents = self._create_agents_with_different_strategies()
-    
+
     def _create_agents_with_different_strategies(self) -> Dict[str, Agent]:
         """Create agents with different context management strategies."""
-        
+
         agents = {}
-        
+
         # 1. CHAT MEMORY ONLY (automatic compression)
         agents["chat_only"] = Agent(
             model=OpenRouter(id=self.model_name),
@@ -55,7 +54,7 @@ class AgnoContextManager:
             ),
             instructions="You have chat memory with automatic compression."
         )
-        
+
         # 2. VECTOR MEMORY ONLY (semantic retrieval)
         agents["vector_only"] = Agent(
             model=OpenRouter(id=self.model_name),
@@ -67,7 +66,7 @@ class AgnoContextManager:
             ),
             instructions="You have vector memory for semantic retrieval."
         )
-        
+
         # 3. HYBRID MEMORY (best of both worlds) - RECOMMENDED
         agents["hybrid"] = Agent(
             model=OpenRouter(id=self.model_name),
@@ -85,7 +84,7 @@ class AgnoContextManager:
             ),
             instructions="You have hybrid memory for optimal context management."
         )
-        
+
         # 4. ADAPTIVE MEMORY (automatic strategy selection)
         agents["adaptive"] = Agent(
             model=OpenRouter(id=self.model_name),
@@ -97,36 +96,36 @@ class AgnoContextManager:
             ),
             instructions="You have adaptive memory that auto-adjusts to context limits."
         )
-        
+
         return agents
-    
+
     async def demonstrate_context_management(self, conversation_length: str = "long"):
         """Demonstrate how Agno handles different conversation lengths."""
-        
+
         results = {}
-        
+
         # Simulate conversations of different lengths
         if conversation_length == "short":
             messages = ["Hello", "How are you?", "Tell me about AI"]
         elif conversation_length == "medium":
-            messages = [f"Message {i}: " + "This is a medium length conversation. " * 5 
+            messages = [f"Message {i}: " + "This is a medium length conversation. " * 5
                        for i in range(20)]
         else:  # long
-            messages = [f"Message {i}: " + "This is a very long conversation with lots of context. " * 10 
+            messages = [f"Message {i}: " + "This is a very long conversation with lots of context. " * 10
                        for i in range(100)]
-        
+
         # Test each agent type
         for agent_type, agent in self.agents.items():
             logger.info(f"Testing {agent_type} with {conversation_length} conversation")
-            
+
             # Send all messages and see how context is managed
             for i, message in enumerate(messages):
                 try:
                     response = await agent.run(f"{message} (Turn {i+1})")
-                    
+
                     # Check context utilization
                     context_info = self._get_context_info(agent)
-                    
+
                     results[f"{agent_type}_turn_{i+1}"] = {
                         "response_length": len(response) if response else 0,
                         "context_tokens_used": context_info.get("tokens_used", 0),
@@ -134,23 +133,23 @@ class AgnoContextManager:
                         "memory_strategy": context_info.get("strategy_used", "unknown"),
                         "compressed": context_info.get("compression_applied", False)
                     }
-                    
+
                     # Log when Agno applies compression or retrieval
                     if context_info.get("compression_applied"):
                         logger.info(f"Agno compressed context for {agent_type} at turn {i+1}")
-                    
+
                     if context_info.get("retrieval_applied"):
                         logger.info(f"Agno used vector retrieval for {agent_type} at turn {i+1}")
-                    
+
                 except Exception as e:
                     logger.error(f"Error with {agent_type} at turn {i+1}: {e}")
                     break
-        
+
         return results
-    
+
     def _get_context_info(self, agent: Agent) -> Dict[str, Any]:
         """Get context utilization info from Agno agent."""
-        
+
         # Agno provides context information (exact API may vary)
         try:
             if hasattr(agent, 'context_info'):
@@ -169,10 +168,10 @@ class AgnoContextManager:
         except Exception as e:
             logger.debug(f"Could not get context info: {e}")
             return {}
-    
+
     def get_context_strategies_info(self) -> Dict[str, Dict[str, Any]]:
         """Get information about different context management strategies."""
-        
+
         return {
             "chat_only": {
                 "description": "Automatic compression of older messages",
@@ -181,7 +180,7 @@ class AgnoContextManager:
                 "cons": ["May lose important older information"],
                 "context_limit_handling": "Automatic compression when approaching limit"
             },
-            
+
             "vector_only": {
                 "description": "Semantic retrieval of relevant past content",
                 "best_for": "Knowledge-heavy conversations",
@@ -189,7 +188,7 @@ class AgnoContextManager:
                 "cons": ["May miss recent conversational context"],
                 "context_limit_handling": "Retrieves most relevant historical content"
             },
-            
+
             "hybrid": {
                 "description": "Combines chat memory + vector retrieval",
                 "best_for": "Most production applications",
@@ -197,7 +196,7 @@ class AgnoContextManager:
                 "cons": ["Slightly more complex"],
                 "context_limit_handling": "Smart balance of recent + relevant historical"
             },
-            
+
             "adaptive": {
                 "description": "Automatically adapts strategy based on conversation",
                 "best_for": "Diverse conversation types",
@@ -218,7 +217,7 @@ def get_model_context_limits() -> Dict[str, int]:
         "claude-3-haiku": 200000,
         "gemini-1.5-pro": 2000000,  # 2M tokens!
         "gemini-1.5-flash": 1000000,
-        
+
         # Open Source
         "llama-3.3-70b": 131072,
         "deepseek-chat": 64000,
@@ -236,7 +235,7 @@ AGNO_CONTEXT_BENEFITS = {
     "automatic_management": "No manual context window handling needed",
     "intelligent_compression": "Preserves important information while reducing size",
     "semantic_retrieval": "Finds relevant past information automatically",
-    "multi_strategy": "Different strategies for different conversation types", 
+    "multi_strategy": "Different strategies for different conversation types",
     "transparent": "Works behind the scenes, no code changes needed",
     "scalable": "Handles conversations of any length",
     "memory_efficient": "Only loads relevant context into model",

@@ -29,8 +29,8 @@ A **complete multi-agent LLM team** with:
 from app.api.v1 import team_chat
 
 api_router.include_router(
-    team_chat.router, 
-    prefix="/team-chat", 
+    team_chat.router,
+    prefix="/team-chat",
     tags=["team-chat"]
 )
 ```
@@ -69,7 +69,7 @@ async def startup_event():
     settings = get_settings()
     team_service = LLMTeamChatService(settings)
     await team_service.initialize()
-    
+
     # Store globally for access
     app.state.team_service = team_service
 ```
@@ -89,7 +89,7 @@ async def startup_event():
 # Response
 {
     "message": "I'll help you create a secure authentication system...",
-    "session_id": "user_123", 
+    "session_id": "user_123",
     "metadata": {
         "agents_involved": ["Developer", "QA_Reviewer", "Human_Liaison"],
         "processing_time": 45.2,
@@ -139,7 +139,7 @@ User: "Research GraphQL best practices and implement a GraphQL API"
 Team Flow:
 1. Orchestrator → delegates research to Researcher
 2. Researcher → gathers GraphQL information, best practices
-3. Orchestrator → delegates implementation to Developer  
+3. Orchestrator → delegates implementation to Developer
 4. Developer → creates GraphQL API code
 5. QA Reviewer → reviews code, suggests improvements
 6. Human Liaison → requests approval for deployment
@@ -204,7 +204,7 @@ import { useState } from 'react';
 export function TeamChat() {
     const [message, setMessage] = useState('');
     const [response, setResponse] = useState('');
-    
+
     const sendToTeam = async () => {
         const res = await fetch('/api/v1/team-chat/message', {
             method: 'POST',
@@ -215,21 +215,21 @@ export function TeamChat() {
                 metadata: { source: 'web_ui' }
             })
         });
-        
+
         const data = await res.json();
         setResponse(data.message);
-        
+
         // Show which agents were involved
         console.log('Agents:', data.metadata.agents_involved);
     };
-    
+
     return (
         <div className="team-chat">
             <h2>🤖 AI Team Assistant</h2>
             <div className="agents-status">
                 Researcher • Developer • QA • Orchestrator • Human Liaison
             </div>
-            <textarea 
+            <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Ask the team anything: research, development, analysis..."
@@ -269,7 +269,7 @@ developer_agent.add_tool(await create_custom_database_tool())
 # Define custom workflows
 workflow = TeamWorkflow([
     ("research", "researcher"),
-    ("architecture", "developer"), 
+    ("architecture", "developer"),
     ("implementation", "developer"),
     ("review", "qa_reviewer"),
     ("approval", "human_liaison")
@@ -282,7 +282,7 @@ team.set_workflow(workflow)
 
 ### **For Users:**
 - 🧠 **Smart AI team** that collaborates
-- 🔄 **Persistent memory** across conversations  
+- 🔄 **Persistent memory** across conversations
 - 🛠️ **Specialized expertise** for different tasks
 - 👥 **Human oversight** for important decisions
 - ⚡ **Real-time interaction** via WebSocket

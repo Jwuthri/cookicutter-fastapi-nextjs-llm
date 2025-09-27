@@ -2,13 +2,13 @@
 Database configuration and session management for {{cookiecutter.project_name}}.
 """
 
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
-from typing import Generator
 import logging
+from typing import Generator
 
 from app.config import get_settings
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Session, sessionmaker
 
 # Get settings
 settings = get_settings()
@@ -51,9 +51,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def get_db() -> Generator[Session, None, None]:
     """
     Get database session for dependency injection (legacy sync).
-    
+
     Note: This is deprecated. Use get_async_db_session() from session.py instead.
-    
+
     Yields:
         Session: SQLAlchemy database session
     """

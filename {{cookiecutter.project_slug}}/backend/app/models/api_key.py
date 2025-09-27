@@ -2,8 +2,9 @@
 API Key-related Pydantic models for API serialization.
 """
 
-from typing import Optional, Dict, Any, List
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -13,7 +14,7 @@ class ApiKeyCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="API key name/description")
     permissions: Optional[Dict[str, Any]] = Field(None, description="API key permissions")
     expires_at: Optional[datetime] = Field(None, description="Optional expiration date")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -33,7 +34,7 @@ class ApiKeyUpdateRequest(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100, description="API key name/description")
     permissions: Optional[Dict[str, Any]] = Field(None, description="API key permissions")
     is_active: Optional[bool] = Field(None, description="Whether API key is active")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -61,7 +62,7 @@ class ApiKeyInfo(BaseModel):
     last_used_at: Optional[datetime] = Field(None, description="Last usage timestamp")
     expires_at: Optional[datetime] = Field(None, description="Expiration timestamp")
     usage_count: int = Field(0, description="Number of times key has been used")
-    
+
     class Config:
         from_attributes = True  # For SQLAlchemy model conversion
         json_schema_extra = {
@@ -92,7 +93,7 @@ class ApiKeyCreateResponse(BaseModel):
     permissions: Optional[Dict[str, Any]] = Field(None, description="API key permissions")
     created_at: datetime = Field(..., description="Creation timestamp")
     expires_at: Optional[datetime] = Field(None, description="Expiration timestamp")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -119,7 +120,7 @@ class ApiKeyUsageStats(BaseModel):
     requests_this_week: int = Field(0, description="Requests made this week")
     requests_this_month: int = Field(0, description="Requests made this month")
     average_requests_per_day: float = Field(0.0, description="Average requests per day")
-    
+
     class Config:
         from_attributes = True
         json_schema_extra = {
@@ -146,7 +147,7 @@ class ApiKeyListItem(BaseModel):
     expires_at: Optional[datetime] = Field(None, description="Expiration timestamp")
     usage_count: int = Field(0, description="Number of times key has been used")
     key_preview: str = Field(..., description="Masked preview of the API key")
-    
+
     class Config:
         from_attributes = True
         json_schema_extra = {
@@ -170,7 +171,7 @@ class ApiKeyListResponse(BaseModel):
     limit: int = Field(..., description="Items per page")
     offset: int = Field(..., description="Items skipped")
     has_more: bool = Field(..., description="Whether there are more items")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -202,7 +203,7 @@ class ApiKeyPermissions(BaseModel):
     tasks: bool = Field(False, description="Access to background task endpoints")
     admin: bool = Field(False, description="Administrative access")
     rate_limit_override: Optional[int] = Field(None, description="Custom rate limit")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -223,7 +224,7 @@ class ApiKeyValidationResponse(BaseModel):
     permissions: Optional[Dict[str, Any]] = Field(None, description="API key permissions if valid")
     expires_at: Optional[datetime] = Field(None, description="Expiration timestamp if applicable")
     error: Optional[str] = Field(None, description="Error message if invalid")
-    
+
     class Config:
         json_schema_extra = {
             "example": {

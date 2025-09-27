@@ -45,7 +45,7 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
-    
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
@@ -55,7 +55,7 @@ class ApiClient {
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`
     }
-    
+
     const config: RequestInit = {
       headers,
       ...options,
@@ -66,7 +66,7 @@ class ApiClient {
 
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`
-        
+
         try {
           const errorData = await response.json()
           errorMessage = errorData.detail || errorData.message || errorMessage

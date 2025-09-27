@@ -22,7 +22,7 @@ MEMORY_TYPE=redis
 
 # Redis persistence settings (add to redis.conf)
 save 900 1 300 10 60 10000    # RDB snapshots
-appendonly yes                # AOF logging  
+appendonly yes                # AOF logging
 appendfsync everysec          # Sync frequency
 ```
 
@@ -52,7 +52,7 @@ Memory starts empty → Users lose context
 ```
 Server Restart → Agno automatically loads from:
 ├── Vector DB: Long-term semantic memory ✅
-├── Redis: Recent conversations ✅  
+├── Redis: Recent conversations ✅
 ├── Database: Full conversation history ✅
 └── Files: Local persistent storage ✅
 
@@ -69,7 +69,7 @@ memory = await create_persistent_file_memory()
 ```
 
 ### **Production (Small)**
-```python 
+```python
 # Redis + Vector DB hybrid
 memory = await create_persistent_hybrid_memory()
 # Recent chats in Redis + long-term in Pinecone
@@ -100,7 +100,7 @@ services:
       - agno_data:/data/agno  # Persistent volume
     depends_on:
       - redis
-  
+
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes  # Enable persistence
@@ -171,7 +171,7 @@ agent = Agent(
 # Export conversation data
 await agent.memory.export_backup("/backups/conversations-2024-01-15.json")
 
-# Restore from backup  
+# Restore from backup
 await agent.memory.import_backup("/backups/conversations-2024-01-15.json")
 ```
 
@@ -190,7 +190,7 @@ print(f"Storage Used: {persistence_status['storage_size']}")
 
 ### **Metrics to Monitor**
 - Memory storage size
-- Backup success rate  
+- Backup success rate
 - Recovery time
 - Data retention compliance
 
@@ -206,7 +206,7 @@ export USE_AGNO_AGENTS=true
 export REDIS_URL=redis://localhost:6379/0
 ```
 
-### **Issue: Redis Data Not Persisting**  
+### **Issue: Redis Data Not Persisting**
 ```bash
 # Check Redis persistence config
 redis-cli CONFIG GET save
@@ -233,7 +233,7 @@ curl -H "Api-Key: $PINECONE_API_KEY" https://api.pinecone.io/databases
 # Fast but less persistent
 memory = ChatMemory(max_messages=100)
 
-# Slower but fully persistent  
+# Slower but fully persistent
 memory = ChatMemory(
     storage=PostgreSQLStorage(),
     max_messages=10000,
@@ -256,7 +256,7 @@ memory = HybridMemory(
 - Monitor backup success rates
 - Test disaster recovery procedures
 
-### ❌ **DON'T**  
+### ❌ **DON'T**
 - Use in-memory storage in production
 - Forget to configure Redis persistence
 - Skip backup testing
@@ -288,7 +288,7 @@ for session in existing_sessions:
 With proper persistence configuration:
 
 - ✅ **Server restarts**: No data loss
-- ✅ **Deployments**: Conversations preserved  
+- ✅ **Deployments**: Conversations preserved
 - ✅ **Scaling**: Memory persists across instances
 - ✅ **Disaster recovery**: Automatic backups
 - ✅ **Compliance**: Full audit trails

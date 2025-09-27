@@ -2,21 +2,17 @@
 Completion endpoints for {{cookiecutter.project_name}}.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Optional
 
-from app.api.deps import (
-    get_llm_service,
-    get_user_id_from_header,
-    check_rate_limit
-)
+from app.api.deps import check_rate_limit, get_llm_service, get_user_id_from_header
+from app.core.llm.base import BaseLLMClient
+from app.exceptions import LLMError, ValidationError
 from app.models.completion import (
     CompletionRequest,
     CompletionResponse,
-    StreamingCompletionResponse
+    StreamingCompletionResponse,
 )
-from app.core.llm.base import BaseLLMClient
-from app.exceptions import ValidationError, LLMError
+from fastapi import APIRouter, Depends, HTTPException, status
 
 router = APIRouter()
 
@@ -30,7 +26,7 @@ async def create_completion(
 ) -> CompletionResponse:
     """
     Create a text completion using the configured LLM.
-    
+
     This endpoint provides direct access to the LLM for generating
     text completions without the chat interface abstractions.
     """
@@ -38,7 +34,7 @@ async def create_completion(
         # Validate request
         if not request.prompt or not request.prompt.strip():
             raise ValidationError("Prompt cannot be empty")
-        
+
         # Generate completion
         response_text = await llm_service.generate_completion(
             prompt=request.prompt.strip(),
@@ -48,7 +44,7 @@ async def create_completion(
             stop_sequences=request.stop,
             system_message=request.system_message
         )
-        
+
         return CompletionResponse(
             text=response_text,
             model=llm_service.get_model_name(),
@@ -58,7 +54,7 @@ async def create_completion(
                 "total_tokens": len(request.prompt.split()) + len(response_text.split())
             }
         )
-    
+
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -85,19 +81,20 @@ async def create_streaming_completion(
 ):
     """
     Create a streaming text completion.
-    
+
     Returns a server-sent events stream of completion tokens.
     This is useful for real-time applications that want to show
     the completion as it's being generated.
     """
-    from fastapi.responses import StreamingResponse
     import json
-    
+
+    from fastapi.responses import StreamingResponse
+
     try:
         # Validate request
         if not request.prompt or not request.prompt.strip():
             raise ValidationError("Prompt cannot be empty")
-        
+
         async def generate_stream():
             try:
                 async for chunk in llm_service.generate_streaming_completion(
@@ -114,7 +111,7 @@ async def create_streaming_completion(
                         done=False
                     )
                     yield f"data: {json.dumps(response.dict())}\n\n"
-                
+
                 # Send completion signal
                 final_response = StreamingCompletionResponse(
                     text="",
@@ -122,14 +119,14 @@ async def create_streaming_completion(
                     done=True
                 )
                 yield f"data: {json.dumps(final_response.dict())}\n\n"
-                
+
             except Exception as e:
                 error_response = {
                     "error": str(e),
                     "type": "completion_error"
                 }
                 yield f"data: {json.dumps(error_response)}\n\n"
-        
+
         return StreamingResponse(
             generate_stream(),
             media_type="text/plain",
@@ -139,7 +136,7 @@ async def create_streaming_completion(
                 "Content-Encoding": "identity"
             }
         )
-    
+
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

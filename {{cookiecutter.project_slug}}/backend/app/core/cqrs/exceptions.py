@@ -4,12 +4,12 @@ CQRS-specific exceptions for {{cookiecutter.project_name}}.
 Custom exceptions for command and query handling errors.
 """
 
-from typing import Dict, Any, Optional, Type, Union
+from typing import Any, Dict, Optional, Type, Union
 
 
 class CQRSError(Exception):
     """Base exception for all CQRS-related errors."""
-    
+
     def __init__(
         self,
         message: str,
@@ -20,7 +20,7 @@ class CQRSError(Exception):
         self.message = message
         self.details = details or {}
         self.operation_id = operation_id
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert exception to dictionary for serialization."""
         return {
@@ -33,7 +33,7 @@ class CQRSError(Exception):
 
 class CommandHandlerNotFoundError(CQRSError):
     """Raised when no handler is found for a command."""
-    
+
     def __init__(
         self,
         command_type: Union[Type, str],
@@ -51,7 +51,7 @@ class CommandHandlerNotFoundError(CQRSError):
 
 class QueryHandlerNotFoundError(CQRSError):
     """Raised when no handler is found for a query."""
-    
+
     def __init__(
         self,
         query_type: Union[Type, str],
@@ -69,7 +69,7 @@ class QueryHandlerNotFoundError(CQRSError):
 
 class CommandValidationError(CQRSError):
     """Raised when command validation fails."""
-    
+
     def __init__(
         self,
         command_name: str,
@@ -88,7 +88,7 @@ class CommandValidationError(CQRSError):
 
 class QueryValidationError(CQRSError):
     """Raised when query validation fails."""
-    
+
     def __init__(
         self,
         query_name: str,
@@ -107,7 +107,7 @@ class QueryValidationError(CQRSError):
 
 class CommandExecutionError(CQRSError):
     """Raised when command execution fails."""
-    
+
     def __init__(
         self,
         command_name: str,
@@ -120,13 +120,13 @@ class CommandExecutionError(CQRSError):
             "command_name": command_name,
             "execution_error": execution_error
         }
-        
+
         if original_exception:
             details["original_exception"] = {
                 "type": type(original_exception).__name__,
                 "message": str(original_exception)
             }
-        
+
         super().__init__(
             message=message,
             details=details,
@@ -139,7 +139,7 @@ class CommandExecutionError(CQRSError):
 
 class QueryExecutionError(CQRSError):
     """Raised when query execution fails."""
-    
+
     def __init__(
         self,
         query_name: str,
@@ -152,13 +152,13 @@ class QueryExecutionError(CQRSError):
             "query_name": query_name,
             "execution_error": execution_error
         }
-        
+
         if original_exception:
             details["original_exception"] = {
                 "type": type(original_exception).__name__,
                 "message": str(original_exception)
             }
-        
+
         super().__init__(
             message=message,
             details=details,
@@ -171,7 +171,7 @@ class QueryExecutionError(CQRSError):
 
 class DuplicateHandlerError(CQRSError):
     """Raised when trying to register multiple handlers for the same command/query type."""
-    
+
     def __init__(
         self,
         handler_type: str,  # "command" or "query"
@@ -197,7 +197,7 @@ class DuplicateHandlerError(CQRSError):
 
 class BusNotInitializedError(CQRSError):
     """Raised when trying to use a bus that hasn't been properly initialized."""
-    
+
     def __init__(self, bus_type: str):
         message = f"{bus_type} bus is not initialized"
         super().__init__(
@@ -208,7 +208,7 @@ class BusNotInitializedError(CQRSError):
 
 class HandlerTimeoutError(CQRSError):
     """Raised when a handler execution times out."""
-    
+
     def __init__(
         self,
         operation_name: str,
@@ -229,7 +229,7 @@ class HandlerTimeoutError(CQRSError):
 
 class ConcurrencyError(CQRSError):
     """Raised when a concurrency conflict is detected."""
-    
+
     def __init__(
         self,
         resource_id: str,
@@ -239,14 +239,14 @@ class ConcurrencyError(CQRSError):
     ):
         message = f"Concurrency conflict detected for resource: {resource_id}"
         details = {"resource_id": resource_id}
-        
+
         if expected_version and actual_version:
             message += f" (expected version: {expected_version}, actual: {actual_version})"
             details.update({
                 "expected_version": expected_version,
                 "actual_version": actual_version
             })
-        
+
         super().__init__(
             message=message,
             details=details,
@@ -259,7 +259,7 @@ class ConcurrencyError(CQRSError):
 
 class AuthorizationError(CQRSError):
     """Raised when user is not authorized to execute a command or query."""
-    
+
     def __init__(
         self,
         operation_name: str,
@@ -273,7 +273,7 @@ class AuthorizationError(CQRSError):
             "user_id": user_id,
             "required_permissions": required_permissions or []
         }
-        
+
         super().__init__(
             message=message,
             details=details,
@@ -286,7 +286,7 @@ class AuthorizationError(CQRSError):
 
 class ResourceNotFoundError(CQRSError):
     """Raised when a requested resource is not found."""
-    
+
     def __init__(
         self,
         resource_type: str,
@@ -308,7 +308,7 @@ class ResourceNotFoundError(CQRSError):
 
 class BusinessRuleViolationError(CQRSError):
     """Raised when a business rule is violated during command execution."""
-    
+
     def __init__(
         self,
         rule_name: str,

@@ -144,7 +144,7 @@ async def create_user(user_data: dict) -> dict:
     # Your business logic here
     return {"user_id": "12345", "email": user_data["email"]}
 
-@trace_sync_function("data_processing", {"component": "analytics"}) 
+@trace_sync_function("data_processing", {"component": "analytics"})
 def process_data(data: list) -> dict:
     """Automatically traced sync function."""
     return {"processed": len(data)}
@@ -157,21 +157,21 @@ from app.core.tracing import trace_operation, add_span_attributes, add_span_even
 
 async def complex_operation():
     with trace_operation("business_flow", {"flow": "user_onboarding"}) as span:
-        
+
         # Add custom attributes
         add_span_attributes({
             "user.email": "user@example.com",
             "operation.type": "onboarding"
         })
-        
+
         # Add events for key milestones
         add_span_event("validation.started", {"fields": 5})
-        
+
         # Your business logic
         result = await validate_user_data()
-        
+
         add_span_event("validation.completed", {"success": True})
-        
+
         return result
 ```
 
@@ -185,10 +185,10 @@ class UserRepository(DatabaseTracingMixin):
         # Add database-specific tracing
         self.trace_database_operation(
             operation="insert",
-            table="users", 
+            table="users",
             user_email=user_data["email"]
         )
-        
+
         # Your database logic
         return await self.db.execute(insert_query, user_data)
 ```
@@ -207,7 +207,7 @@ class EmailService(ExternalServiceTracingMixin):
             method="POST",
             recipient=recipient
         )
-        
+
         # Your HTTP client logic
         response = await self.http_client.post("/send", json=email_data)
         return response
@@ -419,7 +419,7 @@ class CustomSpanProcessor(SpanProcessor):
     def on_start(self, span, parent_context):
         # Add custom logic on span start
         pass
-        
+
     def on_end(self, span):
         # Add custom logic on span end (e.g., metrics)
         pass

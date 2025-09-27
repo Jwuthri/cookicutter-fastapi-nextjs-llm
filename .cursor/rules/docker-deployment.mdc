@@ -16,7 +16,7 @@ Both backend and frontend use multi-stage builds for optimization:
 FROM python:3.11-slim as base
 # Install system dependencies
 
-FROM base as dependencies  
+FROM base as dependencies
 # Install Python dependencies
 
 FROM dependencies as development
@@ -45,21 +45,21 @@ services:
     depends_on:
       - db
       - redis
-  
+
   frontend:
     build: ./frontend
     environment:
       - NEXT_PUBLIC_API_URL=http://backend:8000
     depends_on:
       - backend
-  
+
   db:
     image: postgres:15-alpine
     environment:
       - POSTGRES_DB=myapp
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-  
+
   redis:
     image: redis:7-alpine
 ```
@@ -165,7 +165,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-  
+
   frontend:
     depends_on:
       backend:
@@ -211,7 +211,7 @@ services:
   db:
     volumes:
       - postgres_data:/var/lib/postgresql/data
-  
+
   backend:
     volumes:
       - uploads:/app/data/uploads
@@ -340,11 +340,11 @@ services:
     networks:
       - frontend
       - backend
-  
+
   backend:
     networks:
       - backend
-  
+
   db:
     networks:
       - backend  # Database only accessible from backend
@@ -365,14 +365,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Build and push images
       run: |
         docker build -t ${{ secrets.REGISTRY }}/backend ./backend
         docker build -t ${{ secrets.REGISTRY }}/frontend ./frontend
         docker push ${{ secrets.REGISTRY }}/backend
         docker push ${{ secrets.REGISTRY }}/frontend
-    
+
     - name: Deploy to production
       run: |
         ssh production-server "cd /app && docker-compose pull && docker-compose up -d"

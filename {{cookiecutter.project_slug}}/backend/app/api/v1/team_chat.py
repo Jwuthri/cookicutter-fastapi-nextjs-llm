@@ -7,19 +7,25 @@ Integrates with existing chat infrastructure while providing
 multi-agent collaboration capabilities.
 """
 
-from typing import Dict, Any, Optional, List
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
-from fastapi.security import HTTPBearer
-import asyncio
+from typing import Any, Dict, List, Optional
 
-from app.models.chat import ChatRequest, ChatResponse, Message
-from app.models.base import SuccessResponse, ErrorResponse
-from app.api.deps import get_current_user, check_rate_limit
 from app.agents.llm_team_example import LLMTeamChatService
+from app.api.deps import check_rate_limit, get_current_user
 from app.config import get_settings
 from app.core.security.clerk_auth import ClerkUser
-from app.exceptions import ValidationError, ExternalServiceError
+from app.exceptions import ExternalServiceError, ValidationError
+from app.models.base import SuccessResponse
+from app.models.chat import ChatRequest, ChatResponse
 from app.utils.logging import get_logger
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from fastapi.security import HTTPBearer
 
 logger = get_logger("team_chat_api")
 
@@ -50,14 +56,14 @@ async def send_team_message(
 ) -> ChatResponse:
     """
     Send a message to the LLM team for collaborative processing.
-    
+
     The team will automatically:
     1. Analyze the request and determine required expertise
     2. Delegate tasks to appropriate agents (Researcher, Developer, QA, etc.)
     3. Coordinate between agents for complex multi-step tasks
     4. Request human approval for sensitive operations
     5. Return a comprehensive, well-researched response
-    
+
     Example requests that showcase team capabilities:
     - "Research the latest AI trends and create a strategic implementation plan"
     - "Build a user authentication system with security best practices"
@@ -66,14 +72,14 @@ async def send_team_message(
     """
     try:
         user_id = current_user.user_id if current_user else None
-        
+
         # Validate request
         if not request.message or not request.message.strip():
             raise ValidationError("Message cannot be empty")
-        
+
         # Process through the team
         response = await team_service.process_message(request, user_id)
-        
+
         # Log team collaboration metrics
         background_tasks.add_task(
             _log_team_metrics,
@@ -82,17 +88,17 @@ async def send_team_message(
             agents_involved=response.metadata.get("agents_involved", []),
             processing_time=response.metadata.get("processing_time", 0)
         )
-        
+
         return response
-        
+
     except ValidationError as e:
         logger.warning(f"Team chat validation error: {e}")
         raise HTTPException(status_code=400, detail=str(e))
-    
+
     except ExternalServiceError as e:
         logger.error(f"Team chat service error: {e}")
         raise HTTPException(status_code=503, detail=f"Team service unavailable: {str(e)}")
-    
+
     except Exception as e:
         logger.error(f"Unexpected team chat error: {e}")
         raise HTTPException(status_code=500, detail="Internal team processing error")
@@ -105,7 +111,7 @@ async def get_team_status(
 ) -> Dict[str, Any]:
     """
     Get current status of the LLM team.
-    
+
     Returns information about:
     - Agent availability and health
     - Memory usage and persistence status
@@ -114,7 +120,7 @@ async def get_team_status(
     """
     try:
         status = await team_service.get_team_status()
-        
+
         # Add API-specific information
         status["api_info"] = {
             "endpoint": "/api/v1/team-chat",
@@ -125,9 +131,9 @@ async def get_team_status(
                 "concurrent_sessions": 5
             }
         }
-        
+
         return status
-        
+
     except Exception as e:
         logger.error(f"Error getting team status: {e}")
         raise HTTPException(status_code=500, detail="Failed to get team status")
@@ -140,14 +146,14 @@ async def list_team_agents(
 ) -> List[Dict[str, Any]]:
     """
     List all available agents in the team and their capabilities.
-    
+
     Useful for understanding what expertise is available and
     how to best phrase requests for optimal agent selection.
     """
     try:
         team_status = await team_service.get_team_status()
         agents_info = []
-        
+
         for agent_role, agent_data in team_status.get("agents", {}).items():
             agent_info = {
                 "role": agent_role,
@@ -160,9 +166,9 @@ async def list_team_agents(
                 "active": agent_data.get("active", False)
             }
             agents_info.append(agent_info)
-        
+
         return agents_info
-        
+
     except Exception as e:
         logger.error(f"Error listing team agents: {e}")
         raise HTTPException(status_code=500, detail="Failed to list team agents")
@@ -176,7 +182,7 @@ async def provide_human_input(
 ) -> SuccessResponse:
     """
     Provide human input for team decisions.
-    
+
     Used when the team requests human approval or input for:
     - Code deployments
     - External API calls
@@ -187,26 +193,26 @@ async def provide_human_input(
         task_id = request.get("task_id")
         input_type = request.get("type")  # "approval", "feedback", "decision"
         response = request.get("response")
-        
+
         if not all([task_id, input_type, response]):
             raise ValidationError("task_id, type, and response are required")
-        
+
         # Process human input (implementation depends on your workflow)
         # This would typically:
         # 1. Find the waiting task
         # 2. Provide the human input to the team
         # 3. Resume processing
-        
+
         logger.info(f"Human input provided for task {task_id}: {input_type}")
-        
+
         return SuccessResponse(
             message="Human input received and processed",
             data={"task_id": task_id, "input_type": input_type}
         )
-        
+
     except ValidationError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+
     except Exception as e:
         logger.error(f"Error processing human input: {e}")
         raise HTTPException(status_code=500, detail="Failed to process human input")
@@ -220,7 +226,7 @@ async def team_chat_websocket(
 ):
     """
     WebSocket endpoint for real-time team chat.
-    
+
     Provides real-time updates on:
     - Agent task assignments and progress
     - Inter-agent communications
@@ -228,34 +234,34 @@ async def team_chat_websocket(
     - Final responses
     """
     await websocket.accept()
-    
+
     try:
         while True:
             # Receive message from client
             data = await websocket.receive_json()
             message = data.get("message", "")
-            
+
             if not message:
                 await websocket.send_json({
                     "type": "error",
                     "message": "Empty message received"
                 })
                 continue
-            
+
             # Create chat request
             request = ChatRequest(
                 message=message,
                 session_id=session_id,
                 metadata=data.get("metadata", {})
             )
-            
+
             # Send acknowledgment
             await websocket.send_json({
                 "type": "received",
                 "session_id": session_id,
                 "timestamp": request.timestamp
             })
-            
+
             # Process through team (with progress updates)
             try:
                 # Send processing status
@@ -264,10 +270,10 @@ async def team_chat_websocket(
                     "message": "Team is analyzing your request...",
                     "agents_involved": ["orchestrator"]
                 })
-                
+
                 # Process the request
                 response = await team_service.process_message(request)
-                
+
                 # Send final response
                 await websocket.send_json({
                     "type": "response",
@@ -276,13 +282,13 @@ async def team_chat_websocket(
                     "metadata": response.metadata,
                     "timestamp": response.timestamp
                 })
-                
+
             except Exception as e:
                 await websocket.send_json({
                     "type": "error",
                     "message": f"Team processing error: {str(e)}"
                 })
-                
+
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected for session {session_id}")
     except Exception as e:
@@ -294,7 +300,7 @@ async def team_chat_websocket(
 async def get_team_examples() -> List[Dict[str, Any]]:
     """
     Get example requests that showcase team capabilities.
-    
+
     Helps users understand how to effectively use the team
     for different types of tasks.
     """

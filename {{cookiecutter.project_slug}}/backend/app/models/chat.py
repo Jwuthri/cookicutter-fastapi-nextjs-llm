@@ -2,10 +2,11 @@
 Data models for the {{cookiecutter.project_name}} API.
 """
 
-from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional, List, Literal
 from enum import Enum
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class MessageRole(str, Enum):
@@ -29,7 +30,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., description="The user's message", min_length=1)
     session_id: Optional[str] = Field(default=None, description="Session identifier for conversation continuity")
     context: Optional[dict] = Field(default=None, description="Additional context for the request")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -47,7 +48,7 @@ class ChatResponse(BaseModel):
     message_id: str = Field(..., description="Unique identifier for this response message")
     timestamp: datetime = Field(default_factory=datetime.now, description="When the response was generated")
     metadata: Optional[dict] = Field(default=None, description="Additional response metadata")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -73,7 +74,7 @@ class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error type or code")
     detail: str = Field(..., description="Detailed error message")
     timestamp: datetime = Field(default_factory=datetime.now, description="When the error occurred")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -91,7 +92,7 @@ class MessageHistory(BaseModel):
     total: int = Field(..., description="Total number of messages")
     limit: int = Field(..., description="Number of messages per page")
     offset: int = Field(..., description="Number of messages skipped")
-    
+
     class Config:
         json_schema_extra = {
             "example": {

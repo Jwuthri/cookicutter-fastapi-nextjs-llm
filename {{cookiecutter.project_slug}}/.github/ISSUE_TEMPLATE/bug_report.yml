@@ -8,9 +8,9 @@ body:
     attributes:
       value: |
         ## 🐛 Bug Report
-        
+
         Thanks for taking the time to report a bug! Please fill out the information below to help us understand and reproduce the issue.
-        
+
         ---
 
   - type: textarea

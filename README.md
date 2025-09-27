@@ -22,7 +22,7 @@ This cookiecutter template generates a complete, production-ready AI agent appli
 - **Multi-Agent Systems** - Single agents, multi-agent teams, or step-based workflows
 - **Built-in Memory** - Vector databases with semantic search + Redis for fast access
 
-### 🏗️ **Modern Architecture**  
+### 🏗️ **Modern Architecture**
 - **FastAPI Backend** - Python 3.11+ with async/await, type hints, auto-documentation
 - **Next.js Frontend** - React with App Router, TypeScript, modern dark theme
 - **Authentication** - Clerk.com integration with Google social login
@@ -31,7 +31,7 @@ This cookiecutter template generates a complete, production-ready AI agent appli
 - **Docker Ready** - Complete containerization with Docker Compose
 
 ### ⚡ **Developer Experience**
-- **[uv](https://docs.astral.sh/uv/)** - Ultra-fast Python package management 
+- **[uv](https://docs.astral.sh/uv/)** - Ultra-fast Python package management
 - **TypeScript** - Full type safety across frontend and backend
 - **Hot Reload** - Fast development iteration
 - **Comprehensive Tests** - Unit and integration testing setup
@@ -61,22 +61,22 @@ cookiecutter https://github.com/Jwuthri/cookicutter-fastapi-nextjs-llm.git
 ### 3. **Answer the Prompts**
 ```bash
 project_name [My AI Agent App]: Awesome AI Assistant
-project_slug [awesome-ai-assistant]: 
+project_slug [awesome-ai-assistant]:
 description [A FastAPI + Next.js AI agent application]: My awesome AI-powered assistant
 author_name [Your Name]: John Doe
 author_email [your.email@example.com]: john@example.com
-version [0.1.0]: 
-python_version [3.11]: 
-node_version [18]: 
-use_websockets [yes]: 
-include_database [postgresql]: 
+version [0.1.0]:
+python_version [3.11]:
+node_version [18]:
+use_websockets [yes]:
+include_database [postgresql]:
 default_model [gpt-4]: gpt-5
-vector_database [pinecone]: 
-use_agno_agents [yes]: 
+vector_database [pinecone]:
+use_agno_agents [yes]:
 agent_type [single]: multi-agent
-memory_type [hybrid]: 
-frontend_port [3000]: 
-backend_port [8000]: 
+memory_type [hybrid]:
+frontend_port [3000]:
+backend_port [8000]:
 ```
 
 ### 4. **Start Your AI Agent App**
@@ -211,7 +211,7 @@ Access **500+ models** through OpenRouter:
 - **Claude 3.5 Sonnet** - Excellent reasoning capabilities
 - **Gemini 1.5 Pro** - Great context window (2M tokens)
 
-### **Fast & Efficient** 
+### **Fast & Efficient**
 - **GPT-4o Mini** - Quick responses, lower cost
 - **Claude 3 Haiku** - Speed-optimized interactions
 - **Gemini 1.5 Flash** - Ultra-fast processing
@@ -297,7 +297,7 @@ docker-compose up -d
 
 ### **Documentation**
 - [Agno Framework Docs](https://docs.agno.com) - AI agent framework
-- [OpenRouter API](https://openrouter.ai/docs) - Model access documentation  
+- [OpenRouter API](https://openrouter.ai/docs) - Model access documentation
 - [FastAPI Docs](https://fastapi.tiangolo.com) - Backend framework
 - [Next.js Docs](https://nextjs.org/docs) - Frontend framework
 - [uv Documentation](https://docs.astral.sh/uv/) - Python package manager

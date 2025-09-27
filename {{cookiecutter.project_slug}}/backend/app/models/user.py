@@ -2,10 +2,11 @@
 User-related Pydantic models for API serialization.
 """
 
-from typing import Optional, Dict, Any, List
 from datetime import datetime
-from pydantic import BaseModel, Field, EmailStr, validator
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, EmailStr, Field, validator
 
 
 class UserStatusEnum(str, Enum):
@@ -23,7 +24,7 @@ class UserRegistrationRequest(BaseModel):
     email: EmailStr = Field(..., description="Email address")
     password: str = Field(..., min_length=8, description="Password")
     full_name: Optional[str] = Field(None, max_length=100, description="Full name")
-    
+
     @validator("username")
     def validate_username(cls, v):
         """Validate username format."""
@@ -31,7 +32,7 @@ class UserRegistrationRequest(BaseModel):
         if not re.match(r"^[a-zA-Z0-9_-]+$", v):
             raise ValueError("Username can only contain letters, numbers, hyphens, and underscores")
         return v.lower()
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -47,7 +48,7 @@ class UserLoginRequest(BaseModel):
     """User login request model."""
     username_or_email: str = Field(..., description="Username or email address")
     password: str = Field(..., description="Password")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -62,7 +63,7 @@ class UserUpdateRequest(BaseModel):
     full_name: Optional[str] = Field(None, max_length=100, description="Full name")
     bio: Optional[str] = Field(None, max_length=500, description="User biography")
     preferences: Optional[Dict[str, Any]] = Field(None, description="User preferences")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -81,7 +82,7 @@ class PasswordChangeRequest(BaseModel):
     """Password change request model."""
     current_password: str = Field(..., description="Current password")
     new_password: str = Field(..., min_length=8, description="New password")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -105,7 +106,7 @@ class UserProfile(BaseModel):
     created_at: datetime = Field(..., description="Account creation timestamp")
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
     last_login_at: Optional[datetime] = Field(None, description="Last login timestamp")
-    
+
     class Config:
         from_attributes = True  # For SQLAlchemy model conversion
         json_schema_extra = {
@@ -132,7 +133,7 @@ class UserPublicProfile(BaseModel):
     full_name: Optional[str] = Field(None, description="Full name")
     bio: Optional[str] = Field(None, description="User biography")
     created_at: datetime = Field(..., description="Account creation timestamp")
-    
+
     class Config:
         from_attributes = True
         json_schema_extra = {
@@ -154,7 +155,7 @@ class UserStats(BaseModel):
     total_sessions: int = Field(0, description="Total chat sessions created")
     total_messages: int = Field(0, description="Total messages sent")
     last_active_at: Optional[datetime] = Field(None, description="Last activity timestamp")
-    
+
     class Config:
         from_attributes = True
         json_schema_extra = {
@@ -175,7 +176,7 @@ class LoginResponse(BaseModel):
     access_token: str = Field(..., description="JWT access token")
     token_type: str = Field("bearer", description="Token type")
     expires_in: int = Field(..., description="Token expiration in seconds")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -206,7 +207,7 @@ class UserListItem(BaseModel):
     created_at: datetime = Field(..., description="Account creation timestamp")
     last_login_at: Optional[datetime] = Field(None, description="Last login timestamp")
     total_requests: int = Field(0, description="Total API requests")
-    
+
     class Config:
         from_attributes = True
 
@@ -218,7 +219,7 @@ class UserListResponse(BaseModel):
     limit: int = Field(..., description="Items per page")
     offset: int = Field(..., description="Items skipped")
     has_more: bool = Field(..., description="Whether there are more items")
-    
+
     class Config:
         json_schema_extra = {
             "example": {

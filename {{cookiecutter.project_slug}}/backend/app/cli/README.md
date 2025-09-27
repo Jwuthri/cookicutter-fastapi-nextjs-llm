@@ -257,7 +257,7 @@ from app.utils.logging import print_success, print_error, print_warning, print_i
 
 # Rich print functions for immediate output
 print_success("Operation completed")
-print_error("Something went wrong") 
+print_error("Something went wrong")
 print_warning("Careful about this")
 print_info("Just so you know")
 

@@ -49,9 +49,9 @@ interface ChatInterfaceProps {
   onMessageSent?: (message: string) => void
 }
 
-export default function ChatInterface({ 
-  initialMessages = [], 
-  onMessageSent 
+export default function ChatInterface({
+  initialMessages = [],
+  onMessageSent
 }: ChatInterfaceProps) {
   // Component implementation
 }
@@ -75,11 +75,11 @@ Example custom hook:
 export function useChat(initialSessionId?: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  
+
   const sendMessage = async (content: string) => {
     // Implementation
   }
-  
+
   return { messages, isLoading, sendMessage }
 }
 ```
@@ -138,11 +138,11 @@ export async function sendChatMessage(request: ChatRequest): Promise<ChatRespons
     },
     body: JSON.stringify(request),
   })
-  
+
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`)
   }
-  
+
   return response.json()
 }
 ```

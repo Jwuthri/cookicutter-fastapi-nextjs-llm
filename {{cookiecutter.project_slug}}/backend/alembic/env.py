@@ -2,20 +2,21 @@
 Alembic environment configuration for {{cookiecutter.project_name}}.
 """
 
-from logging.config import fileConfig
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-from alembic import context
 import os
 import sys
+from logging.config import fileConfig
+
+from alembic import context
+from sqlalchemy import engine_from_config, pool
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from app.config import get_settings
+
 # Import your models and database base
 from app.database.base import Base
 from app.database.models import *  # Import all models
-from app.config import get_settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -79,7 +80,7 @@ def run_migrations_online() -> None:
     # Create engine configuration
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = database_url
-    
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",

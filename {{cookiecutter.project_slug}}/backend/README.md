@@ -47,7 +47,7 @@ If you're upgrading from v1.x, here are the key breaking changes:
 # Before (v1.x)
 redis_client = get_redis_client()  # Global instance
 
-# After (v2.0) 
+# After (v2.0)
 async def endpoint(redis: RedisClient = Depends(get_redis_client)):
     # Properly scoped and managed
 ```
@@ -86,7 +86,7 @@ raise HTTPException(400, "Validation failed")
 
 # After (v2.0)
 raise ValidationError(
-    message="User validation failed", 
+    message="User validation failed",
     field="email",
     context={"user_id": user.id}
 )  # Auto-tracked with request correlation
@@ -111,7 +111,7 @@ raise ValidationError(
 - **🛡️ Security Headers**: CORS, rate limiting, and comprehensive middleware
 - **🔍 Input Validation**: Comprehensive request validation with detailed error responses
 
-### 📊 Monitoring & Observability  
+### 📊 Monitoring & Observability
 - **📈 Application Metrics**: Request counts, response times, error rates, resource usage
 - **🏥 Health Checks**: Comprehensive service dependency monitoring
 - **💾 System Monitoring**: CPU, memory, disk usage tracking
@@ -358,7 +358,7 @@ Once started, the following services will be available:
 # Check if everything is running
 curl "http://localhost:{{cookiecutter.backend_port}}/api/v1/health/" | python -m json.tool
 
-# Get metrics summary  
+# Get metrics summary
 curl "http://localhost:{{cookiecutter.backend_port}}/api/v1/metrics/summary" | python -m json.tool
 
 # Test a simple chat message
@@ -885,7 +885,7 @@ Before deploying to production:
    ```bash
    # Run migrations
    uv run python -m app.cli database migrate
-   
+
    # Verify database status
    uv run python -m app.cli database status
    ```
@@ -948,7 +948,7 @@ spec:
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:
-              name: backend-secrets  
+              name: backend-secrets
               key: database-url
         readinessProbe:
           httpGet:
@@ -1123,7 +1123,7 @@ The application provides comprehensive health checks:
 
 - **`/health`**: Overall application health
 - **`/api/v1/health/redis`**: Redis connectivity
-- **`/api/v1/health/kafka`**: Kafka connectivity  
+- **`/api/v1/health/kafka`**: Kafka connectivity
 - **`/api/v1/health/rabbitmq`**: RabbitMQ connectivity
 - **`/api/v1/health/ready`**: Kubernetes readiness probe
 - **`/api/v1/health/live`**: Kubernetes liveness probe

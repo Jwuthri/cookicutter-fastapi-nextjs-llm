@@ -5,21 +5,19 @@ Test configuration and fixtures for {{cookiecutter.project_name}} backend tests.
 import asyncio
 import re
 import time
+from typing import Any, AsyncGenerator, Generator
+from unittest.mock import MagicMock, patch
+
 import pytest
 import pytest_asyncio
-from typing import AsyncGenerator, Generator, TypeVar, Type, Any
-from unittest.mock import MagicMock, patch
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import StaticPool
-from fastapi.testclient import TestClient
-
-from app.main import app
 from app.config import Settings, get_settings
+from app.core.security.auth import AuthManager
 from app.database.base import Base, get_db
-from app.database.repositories import UserRepository, ApiKeyRepository
-from app.core.security.auth import get_auth_provider, AuthManager
-from app.services.redis_client import RedisClient
-from app.core.llm.factory import LLMFactory
+from app.database.repositories import ApiKeyRepository, UserRepository
+from app.main import app
+from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 
 
 # Test settings
@@ -57,15 +55,15 @@ async def test_engine():
         poolclass=StaticPool,
         echo=False
     )
-    
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     yield engine
-    
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-    
+
     await engine.dispose()
 
 
@@ -75,7 +73,7 @@ async def test_db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
     async_session = async_sessionmaker(
         test_engine, class_=AsyncSession, expire_on_commit=False
     )
-    
+
     async with async_session() as session:
         yield session
 
@@ -83,19 +81,19 @@ async def test_db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
 @pytest.fixture
 def client(test_settings, test_db_session) -> Generator[TestClient, None, None]:
     """Create test client with dependency overrides."""
-    
+
     # Override dependencies
     app.dependency_overrides[get_settings] = lambda: test_settings
     app.dependency_overrides[get_db] = lambda: test_db_session
-    
+
     # Mock external services
-    mock_redis = MagicMock()
-    mock_kafka = MagicMock()
-    mock_rabbitmq = MagicMock()
-    
+    MagicMock()
+    MagicMock()
+    MagicMock()
+
     with TestClient(app) as test_client:
         yield test_client
-    
+
     # Clean up overrides
     app.dependency_overrides.clear()
 
@@ -124,7 +122,7 @@ def auth_manager(test_settings) -> AuthManager:
 async def test_user(test_db_session, user_repository) -> dict:
     """Create a test user."""
     from app.database.models import UserStatusEnum
-    
+
     user = user_repository.create(
         db=test_db_session,
         username="testuser",
@@ -134,9 +132,9 @@ async def test_user(test_db_session, user_repository) -> dict:
         is_active=True,
         status=UserStatusEnum.ACTIVE
     )
-    
+
     await test_db_session.commit()
-    
+
     return {
         "id": user.id,
         "username": user.username,
@@ -150,20 +148,20 @@ async def test_user(test_db_session, user_repository) -> dict:
 async def admin_user(test_db_session, user_repository) -> dict:
     """Create a test admin user."""
     from app.database.models import UserStatusEnum
-    
+
     user = user_repository.create(
         db=test_db_session,
         username="admin",
-        email="admin@example.com", 
+        email="admin@example.com",
         password_hash="$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj8OdTxhwKhO",  # "testpass123"
         full_name="Admin User",
         is_active=True,
         is_superuser=True,
         status=UserStatusEnum.ACTIVE
     )
-    
+
     await test_db_session.commit()
-    
+
     return {
         "id": user.id,
         "username": user.username,
@@ -183,7 +181,7 @@ def auth_headers(auth_manager, test_user) -> dict:
         "email": test_user["email"]
     }
     token = auth_manager.create_access_token(token_data)
-    
+
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -197,7 +195,7 @@ def admin_headers(auth_manager, admin_user) -> dict:
         "is_superuser": True
     }
     token = auth_manager.create_access_token(token_data)
-    
+
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -266,7 +264,6 @@ async def cleanup_after_test():
     """Cleanup after each test."""
     yield
     # Cleanup code here if needed
-    pass
 
 
 # Performance testing fixtures
@@ -274,18 +271,18 @@ async def cleanup_after_test():
 def performance_client():
     """Client optimized for performance testing."""
     from fastapi.testclient import TestClient
-    
+
     # Override dependencies for performance tests
     app.dependency_overrides[get_settings] = lambda: TestSettings()
-    
+
     # Mock external services for consistent performance
-    mock_redis = MagicMock()
-    mock_kafka = MagicMock()
-    mock_rabbitmq = MagicMock()
-    
+    MagicMock()
+    MagicMock()
+    MagicMock()
+
     with TestClient(app) as test_client:
         yield test_client
-    
+
     app.dependency_overrides.clear()
 
 
@@ -341,11 +338,11 @@ def malicious_payloads():
 @pytest_asyncio.fixture
 async def populated_db(test_db_session, test_user):
     """Database populated with test data."""
-    from app.database.models.chat_session import ChatSession
     from app.database.models.chat_message import ChatMessage, MessageRoleEnum
-    
+    from app.database.models.chat_session import ChatSession
+
     user_id = test_user["id"]
-    
+
     # Create test sessions
     sessions = []
     for i in range(3):
@@ -356,9 +353,9 @@ async def populated_db(test_db_session, test_user):
         )
         sessions.append(session)
         test_db_session.add(session)
-    
+
     await test_db_session.flush()
-    
+
     # Create test messages
     for session in sessions:
         for j in range(5):
@@ -368,9 +365,9 @@ async def populated_db(test_db_session, test_user):
                 role=MessageRoleEnum.USER if j % 2 == 0 else MessageRoleEnum.ASSISTANT
             )
             test_db_session.add(message)
-    
+
     await test_db_session.commit()
-    
+
     return {
         "user_id": user_id,
         "sessions": sessions,
@@ -386,19 +383,19 @@ def mock_external_services():
          patch('app.services.kafka_client.KafkaClient') as mock_kafka, \
          patch('app.services.rabbitmq_client.RabbitMQClient') as mock_rabbitmq, \
          patch('app.core.llm.factory.get_llm_client') as mock_llm:
-        
+
         # Configure mock behaviors
         mock_redis.return_value.set.return_value = True
         mock_redis.return_value.get.return_value = None
-        
+
         mock_kafka.return_value.send.return_value = True
         mock_rabbitmq.return_value.publish.return_value = True
-        
+
         mock_llm.return_value.generate_completion.return_value = {
             "choices": [{"text": "Test response", "finish_reason": "stop"}],
             "usage": {"total_tokens": 20}
         }
-        
+
         yield {
             "redis": mock_redis,
             "kafka": mock_kafka,
@@ -416,13 +413,13 @@ def metrics_collector():
             self.metrics = []
             self.start_time = None
             self.end_time = None
-        
+
         def start(self):
             self.start_time = time.time()
-        
+
         def end(self):
             self.end_time = time.time()
-        
+
         def record(self, name: str, value: Any, labels: dict = None):
             self.metrics.append({
                 "name": name,
@@ -430,15 +427,15 @@ def metrics_collector():
                 "labels": labels or {},
                 "timestamp": time.time()
             })
-        
+
         def get_duration(self):
             if self.start_time and self.end_time:
                 return self.end_time - self.start_time
             return None
-        
+
         def get_metrics_by_name(self, name: str):
             return [m for m in self.metrics if m["name"] == name]
-    
+
     return MetricsCollector()
 
 
@@ -495,8 +492,7 @@ def test_helpers():
         def assert_response_time(response, max_time_ms=1000):
             """Assert response time is within limits."""
             # This would check actual response times in real implementation
-            pass
-        
+
         @staticmethod
         def assert_no_sensitive_data(response_text):
             """Assert response doesn't contain sensitive information."""
@@ -507,11 +503,11 @@ def test_helpers():
                 r'token\s*[=:]\s*[\'"][^\'"]+[\'"]',
                 r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'  # Email
             ]
-            
+
             for pattern in sensitive_patterns:
                 assert not re.search(pattern, response_text, re.IGNORECASE), \
                     f"Sensitive data pattern found: {pattern}"
-        
+
         @staticmethod
         def wait_for_condition(condition_func, timeout=10, interval=0.1):
             """Wait for a condition to become true."""
@@ -522,7 +518,7 @@ def test_helpers():
                     return True
                 time.sleep(interval)
             return False
-    
+
     return TestHelpers
 
 
@@ -531,7 +527,7 @@ def test_helpers():
 async def cleanup_test_data(test_db_session):
     """Cleanup test data after each test."""
     yield
-    
+
     # Cleanup logic here if needed
     try:
         # Clear any test data

@@ -2,10 +2,10 @@
 Helper utilities for {{cookiecutter.project_name}}.
 """
 
-import uuid
 import hashlib
-from typing import Any, Dict, Optional
+import uuid
 from datetime import datetime, timezone
+from typing import Any, Dict
 
 
 def generate_id() -> str:
@@ -31,6 +31,7 @@ def get_timestamp() -> str:
 def sanitize_filename(filename: str) -> str:
     """Sanitize a filename for safe usage."""
     import re
+
     # Remove special characters and replace spaces with underscores
     sanitized = re.sub(r'[^\w\-_\.]', '_', filename)
     return sanitized
@@ -47,7 +48,7 @@ def format_file_size(size_bytes: int) -> str:
     """Format file size in human readable format."""
     if size_bytes == 0:
         return "0 B"
-    
+
     size_names = ["B", "KB", "MB", "GB", "TB"]
     import math
     i = int(math.floor(math.log(size_bytes, 1024)))

@@ -2,14 +2,14 @@
 Database transaction management utilities.
 """
 
-from contextlib import contextmanager, asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from functools import wraps
-from typing import Callable, Any, Generator, AsyncGenerator
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Any, AsyncGenerator, Callable, Generator
 
-from app.utils.logging import get_logger
 from app.exceptions import DatabaseError
+from app.utils.logging import get_logger
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 logger = get_logger("database.transaction")
 
@@ -18,7 +18,7 @@ logger = get_logger("database.transaction")
 def transaction_scope(db: Session) -> Generator[Session, None, None]:
     """
     Provide a transactional scope around a series of operations.
-    
+
     Usage:
         with transaction_scope(db) as session:
             # Do database operations
@@ -39,7 +39,7 @@ def transaction_scope(db: Session) -> Generator[Session, None, None]:
 async def async_transaction_scope(db: AsyncSession) -> AsyncGenerator[AsyncSession, None]:
     """
     Provide an async transactional scope around a series of operations.
-    
+
     Usage:
         async with async_transaction_scope(db) as session:
             # Do async database operations
@@ -59,7 +59,7 @@ async def async_transaction_scope(db: AsyncSession) -> AsyncGenerator[AsyncSessi
 def transactional(func: Callable) -> Callable:
     """
     Decorator to wrap a function in a database transaction.
-    
+
     Usage:
         @transactional
         def create_user_with_session(db: Session, user_data: dict, session_data: dict):
@@ -75,26 +75,26 @@ def transactional(func: Callable) -> Callable:
             if isinstance(arg, Session):
                 db = arg
                 break
-        
+
         if db is None:
             for key, value in kwargs.items():
                 if isinstance(value, Session):
                     db = value
                     break
-        
+
         if db is None:
             raise ValueError("No database session found in function arguments")
-        
+
         with transaction_scope(db):
             return func(*args, **kwargs)
-    
+
     return wrapper
 
 
 def async_transactional(func: Callable) -> Callable:
     """
     Decorator to wrap an async function in a database transaction.
-    
+
     Usage:
         @async_transactional
         async def create_user_with_session(db: AsyncSession, user_data: dict, session_data: dict):
@@ -110,19 +110,19 @@ def async_transactional(func: Callable) -> Callable:
             if isinstance(arg, AsyncSession):
                 db = arg
                 break
-        
+
         if db is None:
             for key, value in kwargs.items():
                 if isinstance(value, AsyncSession):
                     db = value
                     break
-        
+
         if db is None:
             raise ValueError("No async database session found in function arguments")
-        
+
         async with async_transaction_scope(db):
             return await func(*args, **kwargs)
-    
+
     return wrapper
 
 
@@ -130,11 +130,11 @@ class TransactionManager:
     """
     Advanced transaction manager for complex operations.
     """
-    
+
     def __init__(self, db: Session):
         self.db = db
         self._savepoints = []
-    
+
     def savepoint(self) -> str:
         """Create a savepoint and return its name."""
         savepoint_name = f"sp_{len(self._savepoints)}"
@@ -142,27 +142,27 @@ class TransactionManager:
         self._savepoints.append(savepoint_name)
         logger.debug(f"Created savepoint: {savepoint_name}")
         return savepoint_name
-    
+
     def rollback_to_savepoint(self, savepoint_name: str = None):
         """Rollback to a specific savepoint or the most recent one."""
         if not self._savepoints:
             raise DatabaseError("No savepoints available")
-        
+
         if savepoint_name is None:
             savepoint_name = self._savepoints[-1]
-        
+
         try:
             self.db.rollback()
             if savepoint_name in self._savepoints:
                 # Remove savepoints after the rolled back one
                 index = self._savepoints.index(savepoint_name)
                 self._savepoints = self._savepoints[:index]
-            
+
             logger.debug(f"Rolled back to savepoint: {savepoint_name}")
         except Exception as e:
             logger.error(f"Failed to rollback to savepoint {savepoint_name}: {e}")
             raise DatabaseError(f"Savepoint rollback failed: {str(e)}") from e
-    
+
     def commit(self):
         """Commit the transaction and clear savepoints."""
         try:
@@ -172,7 +172,7 @@ class TransactionManager:
         except Exception as e:
             logger.error(f"Transaction commit failed: {e}")
             raise DatabaseError(f"Transaction commit failed: {str(e)}") from e
-    
+
     def rollback(self):
         """Rollback the entire transaction and clear savepoints."""
         try:
@@ -189,24 +189,24 @@ class TransactionManager:
 def bulk_load_related(db: Session, primary_objects: list, relation_loader: Callable) -> dict:
     """
     Bulk load related objects to prevent N+1 queries.
-    
+
     Args:
         db: Database session
         primary_objects: List of primary objects that need related data
         relation_loader: Function that takes a list of IDs and returns related objects
-    
+
     Returns:
         Dictionary mapping primary object IDs to their related objects
     """
     if not primary_objects:
         return {}
-    
+
     # Extract IDs from primary objects
     primary_ids = [getattr(obj, 'id') for obj in primary_objects]
-    
+
     # Bulk load related objects
     related_objects = relation_loader(db, primary_ids)
-    
+
     # Group related objects by primary ID
     related_by_id = {}
     for related in related_objects:
@@ -214,24 +214,24 @@ def bulk_load_related(db: Session, primary_objects: list, relation_loader: Calla
         if primary_id not in related_by_id:
             related_by_id[primary_id] = []
         related_by_id[primary_id].append(related)
-    
+
     return related_by_id
 
 
 def optimize_query_for_eager_loading(query, relationships: list):
     """
     Add eager loading to prevent N+1 queries.
-    
+
     Args:
         query: SQLAlchemy query object
         relationships: List of relationship names to eagerly load
-    
+
     Returns:
         Optimized query with eager loading
     """
     from sqlalchemy.orm import joinedload
-    
+
     for relationship in relationships:
         query = query.options(joinedload(relationship))
-    
+
     return query

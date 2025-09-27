@@ -30,22 +30,22 @@ services:
       - PORT={{cookiecutter.backend_port}}
       - WORKERS=4
       - RELOAD=false
-      
+
       # Database
       {% if cookiecutter.include_database == "postgresql" %}
       - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/{{cookiecutter.project_slug}}
       {% endif %}
-      
+
       # Redis
       - REDIS_URL=redis://redis:6379/0
-      
+
       # Kafka
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - KAFKA_GROUP_ID={{cookiecutter.project_slug}}_backend_prod
-      
+
       # RabbitMQ
       - RABBITMQ_URL=amqp://guest:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
-      
+
       # LLM Configuration
       {% if cookiecutter.llm_provider == "openai" %}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -54,11 +54,11 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-3-sonnet-20240229}
       {% endif %}
-      
+
       # Security
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-10080}
-      
+
       # CORS
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:{{cookiecutter.frontend_port}}}
     depends_on:

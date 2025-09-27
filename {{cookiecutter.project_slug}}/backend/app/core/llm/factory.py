@@ -3,28 +3,29 @@ LLM client factory for {{cookiecutter.project_name}}.
 Unified OpenRouter-based LLM access.
 """
 
-from typing import Dict, Any
-from app.core.llm.base import BaseLLMClient
+from typing import Any, Dict
+
 from app.config import Settings
+from app.core.llm.base import BaseLLMClient
 from app.exceptions import ValidationError
 
 
 def get_llm_client(provider: str, settings: Settings) -> BaseLLMClient:
     """
     Factory function to create the appropriate LLM client.
-    
+
     Args:
         provider: The LLM provider name (now primarily 'openrouter')
         settings: Application settings
-        
+
     Returns:
         Configured LLM client instance
-        
+
     Raises:
         ValidationError: If provider is not supported or configuration is invalid
     """
     provider = provider.lower()
-    
+
     if provider == "openrouter":
         return _create_openrouter_client(settings)
     elif provider == "custom":
@@ -39,7 +40,7 @@ def get_llm_client(provider: str, settings: Settings) -> BaseLLMClient:
 def _create_openrouter_client(settings: Settings) -> BaseLLMClient:
     """Create Agno + OpenRouter client for unified LLM access."""
     from app.core.llm.openrouter_client import AgnoOpenRouterClient
-    
+
     config = {
         "api_key": getattr(settings, "openrouter_api_key", None),
         "model": getattr(settings, "default_model", "{{cookiecutter.default_model}}"),
@@ -51,26 +52,26 @@ def _create_openrouter_client(settings: Settings) -> BaseLLMClient:
         "structured_outputs": getattr(settings, "structured_outputs", False),
         "instructions": getattr(settings, "agent_instructions", None),
     }
-    
+
     return AgnoOpenRouterClient(config)
 
 
 def _create_custom_client(settings: Settings) -> BaseLLMClient:
     """Create custom/mock client for development."""
     from app.core.llm.custom_client import CustomLLMClient
-    
+
     config = {
         "model": "custom-model",
         "echo_mode": getattr(settings, "debug", False)
     }
-    
+
     return CustomLLMClient(config)
 
 
 def list_available_providers() -> Dict[str, Dict[str, Any]]:
     """
     List all available LLM providers and their requirements.
-    
+
     Returns:
         Dictionary with provider information
     """
@@ -111,22 +112,22 @@ def list_available_providers() -> Dict[str, Dict[str, Any]]:
 def validate_provider_config(provider: str, settings: Settings) -> Dict[str, Any]:
     """
     Validate provider configuration.
-    
+
     Args:
         provider: Provider name
         settings: Application settings
-        
+
     Returns:
         Validation results
-        
+
     Raises:
         ValidationError: If configuration is invalid
     """
     providers = list_available_providers()
-    
+
     if provider not in providers:
         raise ValidationError(f"Unknown provider: {provider}")
-    
+
     provider_info = providers[provider]
     validation_results = {
         "provider": provider,
@@ -134,23 +135,23 @@ def validate_provider_config(provider: str, settings: Settings) -> Dict[str, Any
         "errors": [],
         "warnings": []
     }
-    
+
     # Check required environment variables
     for env_var in provider_info.get("required_env", []):
         setting_name = env_var.lower().replace("_", "")
         if not getattr(settings, setting_name, None):
             validation_results["errors"].append(f"Missing required setting: {setting_name}")
             validation_results["valid"] = False
-    
+
     # Provider-specific validations
     if provider == "openrouter":
         model = getattr(settings, "default_model", "")
         available_models = provider_info.get("models", [])
-        
+
         # Check if it's a known model pattern
         if model and not any(model in available_model for available_model in available_models):
             validation_results["warnings"].append(
                 f"Model {model} not in popular list. OpenRouter supports 500+ models."
             )
-    
+
     return validation_results

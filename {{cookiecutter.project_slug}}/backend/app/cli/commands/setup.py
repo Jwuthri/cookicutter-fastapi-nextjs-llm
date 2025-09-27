@@ -2,7 +2,6 @@
 Setup and initialization commands.
 """
 
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -18,7 +17,6 @@ console = Console()
 @click.group()
 def setup():
     """Setup and initialization commands."""
-    pass
 
 
 @setup.command()
@@ -29,7 +27,7 @@ def init():
         "This will set up the application with default configuration.",
         title="Application Setup"
     ))
-    
+
     try:
         setup_tasks = [
             ("Creating configuration files", _create_config_files),
@@ -37,10 +35,10 @@ def init():
             ("Initializing services", _init_services),
             ("Running health checks", _run_initial_health_checks)
         ]
-        
+
         for task_name, task_func in track(setup_tasks, description="Setting up application..."):
             task_func()
-        
+
         console.print(Panel.fit(
             "[bold green]✓ Application setup completed successfully![/bold green]\n\n"
             "Next steps:\n"
@@ -49,7 +47,7 @@ def init():
             "• Run: [bold]python -m app.cli server start[/bold]",
             title="Setup Complete"
         ))
-        
+
     except Exception as e:
         console.print(f"[red]✗ Setup failed: {e}[/red]")
         sys.exit(1)
@@ -59,14 +57,14 @@ def init():
 def env():
     """Create environment configuration file."""
     console.print("[bold blue]Creating environment configuration...[/bold blue]")
-    
+
     env_path = Path(".env")
-    
+
     if env_path.exists():
         if not click.confirm(f"{env_path} already exists. Overwrite?"):
             console.print("[yellow]Environment setup cancelled[/yellow]")
             return
-    
+
     env_content = """# {{cookiecutter.project_name}} Configuration
 # Environment
 ENVIRONMENT=development
@@ -118,14 +116,14 @@ DD_SERVICE={{cookiecutter.project_name}}
 DD_ENV=production
 DD_VERSION={{cookiecutter.version}}
 """
-    
+
     try:
         with open(env_path, "w") as f:
             f.write(env_content)
-        
+
         console.print(f"[green]✓ Environment file created: {env_path}[/green]")
         console.print("[yellow]⚠ Remember to update the configuration values![/yellow]")
-        
+
     except Exception as e:
         console.print(f"[red]✗ Failed to create environment file: {e}[/red]")
 
@@ -134,7 +132,7 @@ DD_VERSION={{cookiecutter.version}}
 def deps():
     """Install Python dependencies."""
     console.print("[bold blue]Installing dependencies...[/bold blue]")
-    
+
     try:
         # Check if uv is available (faster)
         result = subprocess.run(["uv", "--version"], capture_output=True)
@@ -144,9 +142,9 @@ def deps():
         else:
             console.print("[dim]Using pip for installation...[/dim]")
             subprocess.run([sys.executable, "-m", "pip", "install", "-e", "."], check=True)
-        
+
         console.print("[green]✓ Dependencies installed successfully[/green]")
-        
+
     except subprocess.CalledProcessError as e:
         console.print(f"[red]✗ Failed to install dependencies: {e}[/red]")
     except FileNotFoundError:
@@ -157,17 +155,17 @@ def deps():
 def dev():
     """Setup development environment."""
     console.print("[bold blue]Setting up development environment...[/bold blue]")
-    
+
     try:
         dev_tasks = [
             ("Installing development dependencies", _install_dev_deps),
             ("Setting up pre-commit hooks", _setup_pre_commit),
             ("Creating development config", _create_dev_config)
         ]
-        
+
         for task_name, task_func in track(dev_tasks, description="Setting up dev environment..."):
             task_func()
-        
+
         console.print(Panel.fit(
             "[bold green]✓ Development environment ready![/bold green]\n\n"
             "Available tools:\n"
@@ -177,7 +175,7 @@ def dev():
             "• Ruff for linting",
             title="Dev Setup Complete"
         ))
-        
+
     except Exception as e:
         console.print(f"[red]✗ Dev setup failed: {e}[/red]")
 
@@ -185,7 +183,6 @@ def dev():
 def _create_config_files():
     """Create necessary configuration files."""
     # This would create any additional config files needed
-    pass
 
 
 def _setup_environment():
@@ -200,20 +197,18 @@ def _setup_environment():
 def _init_services():
     """Initialize required services."""
     # This would check and initialize services like Redis, DB, etc.
-    pass
 
 
 def _run_initial_health_checks():
     """Run basic health checks after setup."""
     # Basic sanity checks
-    pass
 
 
 def _install_dev_deps():
     """Install development dependencies."""
     try:
         subprocess.run([
-            sys.executable, "-m", "pip", "install", 
+            sys.executable, "-m", "pip", "install",
             "pytest", "black", "ruff", "pre-commit"
         ], check=True, capture_output=True)
     except subprocess.CalledProcessError:
@@ -231,4 +226,3 @@ def _setup_pre_commit():
 def _create_dev_config():
     """Create development-specific configuration."""
     # Create any dev-specific config files
-    pass

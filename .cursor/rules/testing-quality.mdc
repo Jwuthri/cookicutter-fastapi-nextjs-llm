@@ -10,7 +10,7 @@ Follow these testing patterns and quality standards:
 
 ### Test Structure
 - **Location**: All tests in [tests/](mdc:{{cookiecutter.project_slug}}/backend/tests/)
-- **Organization**: 
+- **Organization**:
   - `tests/unit/` - Unit tests for individual components
   - `tests/integration/` - Integration tests for API endpoints
   - `tests/performance/` - Performance and load testing
@@ -22,7 +22,7 @@ Follow these testing patterns and quality standards:
 # tests/unit/test_chat_services.py
 class TestChatService:
     """Test chat service functionality."""
-    
+
     @pytest.fixture
     def mock_dependencies(self):
         """Create mock dependencies for ChatService."""
@@ -31,18 +31,18 @@ class TestChatService:
             "llm_service": MockLLMService(),
             "settings": MockSettings()
         }
-    
+
     @pytest.mark.asyncio
     async def test_process_message_success(self, mock_dependencies):
         """Test successful message processing."""
         service = ChatService(**mock_dependencies)
-        
+
         response = await service.process_message(
             message="Hello",
             session_id="test-session",
             user_id="test-user"
         )
-        
+
         assert response["message"] == "Expected response"
         assert response["session_id"] == "test-session"
 ```
@@ -64,13 +64,13 @@ async def test_chat_endpoint_success(client, auth_headers):
         "message": "Hello, how are you?",
         "session_id": None
     }
-    
+
     response = await client.post(
         "/api/v1/chat/",
         json=request_data,
         headers=auth_headers
     )
-    
+
     assert response.status_code == 200
     data = response.json()
     assert "message" in data
@@ -100,21 +100,21 @@ import { ChatInterface } from '../chat-interface'
 describe('ChatInterface', () => {
   it('renders message input and send button', () => {
     render(<ChatInterface />)
-    
+
     expect(screen.getByPlaceholderText('Type your message...')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument()
   })
-  
+
   it('sends message when form is submitted', async () => {
     const mockOnMessageSent = jest.fn()
     render(<ChatInterface onMessageSent={mockOnMessageSent} />)
-    
+
     const input = screen.getByPlaceholderText('Type your message...')
     const button = screen.getByRole('button', { name: /send/i })
-    
+
     fireEvent.change(input, { target: { value: 'Hello' } })
     fireEvent.click(button)
-    
+
     await waitFor(() => {
       expect(mockOnMessageSent).toHaveBeenCalledWith('Hello')
     })
@@ -131,18 +131,18 @@ import { useChat } from '../use-chat'
 describe('useChat', () => {
   it('initializes with empty messages', () => {
     const { result } = renderHook(() => useChat())
-    
+
     expect(result.current.messages).toEqual([])
     expect(result.current.isLoading).toBe(false)
   })
-  
+
   it('adds message when sendMessage is called', async () => {
     const { result } = renderHook(() => useChat())
-    
+
     await act(async () => {
       await result.current.sendMessage('Hello')
     })
-    
+
     expect(result.current.messages).toHaveLength(2) // User + assistant
   })
 })
@@ -170,7 +170,7 @@ async def test_llm_service_failure_handling(mock_dependencies):
     """Test handling of LLM service failures."""
     mock_dependencies["llm_service"] = MockLLMService(should_fail=True)
     service = ChatService(**mock_dependencies)
-    
+
     with pytest.raises(ExternalServiceError):
         await service.process_message("Hello", "session", "user")
 ```
@@ -195,7 +195,7 @@ async def test_llm_service_failure_handling(mock_dependencies):
 - **Type Checking**: Use `mypy` for static type checking
 - **Security**: Use `bandit` for security issue detection
 
-### TypeScript Frontend  
+### TypeScript Frontend
 - **Linting**: Use ESLint with TypeScript rules
 - **Formatting**: Use Prettier for code formatting
 - **Type Checking**: Use TypeScript compiler for type checking

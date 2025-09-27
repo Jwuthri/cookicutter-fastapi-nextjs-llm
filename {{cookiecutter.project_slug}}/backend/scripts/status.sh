@@ -12,9 +12,9 @@ check_service() {
     local port=$2
     local path=${3:-"/health"}
     local protocol=${4:-"http"}
-    
+
     echo -n "🔍 $service_name: "
-    
+
     if curl -f -s "${protocol}://localhost:${port}${path}" > /dev/null 2>&1; then
         echo "✅ Healthy"
     else
@@ -26,9 +26,9 @@ check_service() {
 check_container() {
     local container_name=$1
     local display_name=${2:-$container_name}
-    
+
     echo -n "🐳 $display_name: "
-    
+
     if docker ps --format "table {{.Names}}" | grep -q "$container_name"; then
         status=$(docker inspect --format='{{.State.Status}}' "$container_name" 2>/dev/null || echo "not found")
         if [ "$status" = "running" ]; then

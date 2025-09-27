@@ -8,13 +8,13 @@ body:
     attributes:
       value: |
         ## 🔒 Security Vulnerability Report
-        
+
         **⚠️ IMPORTANT SECURITY NOTICE ⚠️**
-        
+
         If this is a **critical security vulnerability** that could cause immediate harm, please use GitHub's **Private Vulnerability Reporting** feature instead of creating a public issue.
-        
+
         Go to: **Security tab → Report vulnerability** for sensitive reports.
-        
+
         ---
 
   - type: checkboxes
@@ -100,7 +100,7 @@ body:
         1. Set up environment...
         2. Send request to...
         3. Observe that...
-        
+
         ⚠️ Please sanitize any sensitive information!
     validations:
       required: true
@@ -190,7 +190,7 @@ body:
     attributes:
       value: |
         ---
-        
+
         **🙏 Thank you for helping keep {{cookiecutter.project_name}} secure!**
-        
+
         Your responsible disclosure helps protect all users of this project. We take security seriously and will respond to your report as quickly as possible.

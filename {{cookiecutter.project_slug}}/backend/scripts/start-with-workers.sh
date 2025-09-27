@@ -17,18 +17,18 @@ NC='\033[0m' # No Color
 # Function to cleanup on exit
 cleanup() {
     echo -e "\n${YELLOW}Stopping all services...${NC}"
-    
+
     # Kill all background jobs
     jobs -p | xargs -r kill 2>/dev/null || true
-    
+
     # Wait a bit for graceful shutdown
     sleep 2
-    
+
     # Force kill any remaining processes
     pkill -f "uvicorn app.main" 2>/dev/null || true
     pkill -f "celery.*worker" 2>/dev/null || true
     pkill -f "celery.*flower" 2>/dev/null || true
-    
+
     echo -e "${GREEN}All services stopped.${NC}"
     exit 0
 }
@@ -81,7 +81,7 @@ celery -A app.core.celery_app:celery_app worker \
     --hostname=general@%h > logs/celery-general.log 2>&1 &
 GENERAL_PID=$!
 
-# Chat tasks worker  
+# Chat tasks worker
 celery -A app.core.celery_app:celery_app worker \
     --queues=chat \
     --concurrency=3 \
@@ -133,9 +133,9 @@ if [ "$1" = "--with-flower" ] || [ "$1" = "-f" ]; then
     celery -A app.core.celery_app:celery_app flower \
         --port=5555 > logs/flower.log 2>&1 &
     FLOWER_PID=$!
-    
+
     sleep 3
-    
+
     if kill -0 $FLOWER_PID 2>/dev/null; then
         echo -e "${GREEN}✓ Celery Flower started (PID: $FLOWER_PID)${NC}"
         echo -e "${BLUE}  Monitor at: http://localhost:5555${NC}"
@@ -157,7 +157,7 @@ fi
 echo -e "\n${YELLOW}Log files:${NC}"
 echo -e "  • FastAPI: logs/fastapi.log"
 echo -e "  • General Worker: logs/celery-general.log"
-echo -e "  • Chat Worker: logs/celery-chat.log" 
+echo -e "  • Chat Worker: logs/celery-chat.log"
 echo -e "  • LLM Worker: logs/celery-llm.log"
 if [ "$1" = "--with-flower" ] || [ "$1" = "-f" ]; then
     echo -e "  • Flower: logs/flower.log"

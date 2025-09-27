@@ -3,17 +3,17 @@ Health check endpoints for {{cookiecutter.project_name}}.
 """
 
 from datetime import datetime
-from fastapi import APIRouter, Depends, status
-from typing import Dict, Any
+from typing import Any, Dict
 
 from app.config import Settings, get_settings
 from app.dependencies import (
-    check_redis_health,
+    check_database_health,
     check_kafka_health,
     check_rabbitmq_health,
-    check_database_health
+    check_redis_health,
 )
 from app.models.base import HealthResponse
+from fastapi import APIRouter, Depends, status
 
 router = APIRouter()
 
@@ -31,14 +31,14 @@ async def health_check(
     """
     services_status = {
         "database": "healthy" if database_health else "unhealthy",
-        "redis": "healthy" if redis_health else "unhealthy", 
+        "redis": "healthy" if redis_health else "unhealthy",
         "kafka": "healthy" if kafka_health else "unhealthy",
         "rabbitmq": "healthy" if rabbitmq_health else "unhealthy"
     }
-    
+
     # Overall status - healthy only if all services are healthy
     overall_healthy = all([database_health, redis_health, kafka_health, rabbitmq_health])
-    
+
     return HealthResponse(
         status="healthy" if overall_healthy else "unhealthy",
         timestamp=datetime.now().isoformat(),
@@ -61,13 +61,13 @@ async def redis_health_check(
     }
 
 
-@router.get("/kafka") 
+@router.get("/kafka")
 async def kafka_health_check(
     kafka_health: bool = Depends(check_kafka_health)
 ) -> Dict[str, Any]:
     """Check Kafka service health."""
     return {
-        "service": "kafka", 
+        "service": "kafka",
         "status": "healthy" if kafka_health else "unhealthy",
         "timestamp": datetime.now().isoformat()
     }
@@ -80,7 +80,7 @@ async def rabbitmq_health_check(
     """Check RabbitMQ service health."""
     return {
         "service": "rabbitmq",
-        "status": "healthy" if rabbitmq_health else "unhealthy", 
+        "status": "healthy" if rabbitmq_health else "unhealthy",
         "timestamp": datetime.now().isoformat()
     }
 
@@ -109,7 +109,7 @@ async def readiness_check(
     Used by Kubernetes readiness probes.
     """
     ready = all([database_health, redis_health, kafka_health, rabbitmq_health])
-    
+
     response = {
         "ready": ready,
         "timestamp": datetime.now().isoformat(),
@@ -120,7 +120,7 @@ async def readiness_check(
             "rabbitmq": rabbitmq_health
         }
     }
-    
+
     # Return 503 if not ready
     if not ready:
         from fastapi import Response
@@ -128,7 +128,7 @@ async def readiness_check(
             content=response,
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE
         )
-    
+
     return response
 
 
@@ -165,13 +165,13 @@ async def database_pool_status():
         }
     except Exception as e:
         return {
-            "status": "error", 
+            "status": "error",
             "message": str(e),
             "timestamp": datetime.now().isoformat()
         }
 
 
-@router.get("/database/health") 
+@router.get("/database/health")
 async def database_health_detailed():
     """
     Get detailed database health information.
@@ -187,7 +187,7 @@ async def database_health_detailed():
     except ImportError:
         return {
             "status": "unavailable",
-            "message": "Database monitoring not available", 
+            "message": "Database monitoring not available",
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
@@ -207,7 +207,7 @@ async def database_pool_exhaustion():
         from app.core.monitoring.database import db_monitoring_service
         exhaustion_results = await db_monitoring_service.check_all_exhaustion()
         return {
-            "status": "success", 
+            "status": "success",
             "exhaustion_check": exhaustion_results,
             "timestamp": datetime.now().isoformat()
         }

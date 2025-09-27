@@ -118,6 +118,7 @@ cd backend
 uv venv
 source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
 uv pip install -e .
+uv pip list
 uvicorn app.main:app --reload --host 0.0.0.0 --port {{cookiecutter.backend_port}}
 
 # Frontend (in another terminal)
@@ -145,7 +146,7 @@ Choose from 500+ models available through OpenRouter:
 "anthropic/claude-3.7-sonnet"    # Anthropic's most capable
 "google/gemini-2.5-pro"          # Google's flagship
 
-# Production workhorses  
+# Production workhorses
 "openai/gpt-4o"                  # Reliable and fast
 "anthropic/claude-3.5-sonnet"    # Great for reasoning
 "google/gemini-1.5-pro"          # Excellent context window
@@ -192,7 +193,7 @@ POST /api/v1/chat
 # Stream agent responses
 POST /api/v1/chat/stream
 
-# Get conversation history  
+# Get conversation history
 GET /api/v1/chat/sessions/{session_id}
 
 # List all sessions
@@ -302,7 +303,7 @@ DATABASE_URL={{cookiecutter.include_database}}://...
 {% if cookiecutter.use_websockets == "yes" %}
 WEBSOCKET_ENABLED=true
 {% else %}
-WEBSOCKET_ENABLED=false  
+WEBSOCKET_ENABLED=false
 {% endif %}
 
 # Celery Background Tasks
@@ -341,14 +342,14 @@ gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
 
 # Start Celery workers (in separate terminals)
 celery -A app.core.celery_app:celery_app worker --queues=general --concurrency=2
-celery -A app.core.celery_app:celery_app worker --queues=chat --concurrency=3  
+celery -A app.core.celery_app:celery_app worker --queues=chat --concurrency=3
 celery -A app.core.celery_app:celery_app worker --queues=llm --concurrency=2
 
 # Optional: Start Celery Flower for monitoring
 celery -A app.core.celery_app:celery_app flower --port=5555
 
 # Frontend
-cd frontend  
+cd frontend
 npm run build
 npm start
 ```
@@ -381,10 +382,10 @@ npm start
 │   │   ├── 📁 tasks/          # Celery background tasks
 │   │   └── 📁 utils/          # Utilities
 │   ├── 📁 docker/             # Docker configurations
-│   ├── 📁 scripts/            # Deployment scripts  
+│   ├── 📁 scripts/            # Deployment scripts
 │   └── 📄 pyproject.toml      # Python dependencies (uv)
 │
-├── 📁 frontend/               # Next.js Frontend  
+├── 📁 frontend/               # Next.js Frontend
 │   ├── 📁 src/
 │   │   ├── 📁 app/            # Next.js App Router
 │   │   ├── 📁 components/     # React components
@@ -396,7 +397,7 @@ npm start
 │   └── 📄 package.json       # Node.js dependencies
 │
 ├── 📄 docker-compose.yml     # Development services
-├── 📄 docker-compose.prod.yml # Production setup  
+├── 📄 docker-compose.prod.yml # Production setup
 └── 📄 README.md              # This file
 ```
 
@@ -410,7 +411,7 @@ npm start
 cd backend
 uv run pytest
 
-# Frontend tests  
+# Frontend tests
 cd frontend
 npm test
 ```
@@ -430,7 +431,7 @@ npm run lint
 npm run type-check
 ```
 
-### **Database Migrations** 
+### **Database Migrations**
 {% if cookiecutter.include_database != "none" %}
 ```bash
 cd backend
@@ -454,13 +455,36 @@ uv run alembic upgrade head
 
 ## 🤝 **Contributing**
 
+### 🔧 **Setup Pre-commit Hooks**
+
+We use pre-commit hooks to ensure code quality. Set them up before making changes:
+
+```bash
+# Install and setup pre-commit hooks
+./scripts/setup-pre-commit.sh
+
+# Or manually:
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+
+The hooks will automatically check:
+- **Python**: Black formatting, autoflake unused import removal, isort import sorting, flake8 linting, mypy type checking
+- **Frontend**: Prettier formatting, ESLint linting
+- **Security**: Secret detection, private key scanning
+- **General**: Trailing whitespace, file endings, YAML/JSON validation
+
+### 🚀 **Contribution Steps**
+
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes
-4. Run tests: `uv run pytest && npm test`
-5. Commit: `git commit -m 'Add amazing feature'`
-6. Push: `git push origin feature/amazing-feature`  
-7. Open a Pull Request
+3. **Setup pre-commit hooks**: `./scripts/setup-pre-commit.sh`
+4. Make your changes
+5. Run tests: `uv run pytest && npm test`
+6. Commit: `git commit -m 'Add amazing feature'` (pre-commit hooks will run automatically)
+7. Push: `git push origin feature/amazing-feature`
+8. Open a Pull Request
 
 ---
 
@@ -473,7 +497,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 **Acknowledgments**
 
 - **[Agno](https://docs.agno.com)** - Powerful AI agent framework
-- **[OpenRouter](https://openrouter.ai)** - Unified access to 500+ AI models  
+- **[OpenRouter](https://openrouter.ai)** - Unified access to 500+ AI models
 - **[FastAPI](https://fastapi.tiangolo.com)** - Modern Python web framework
 - **[Next.js](https://nextjs.org)** - React framework for production
 - **[uv](https://github.com/astral-sh/uv)** - Ultra-fast Python package manager
@@ -485,7 +509,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 **Support**
 
-- 📧 **Email**: {{cookiecutter.author_email}}  
+- 📧 **Email**: {{cookiecutter.author_email}}
 - 🐛 **Issues**: [GitHub Issues](https://github.com/{{cookiecutter.author_name}}/{{cookiecutter.project_slug}}/issues)
 - 📖 **Documentation**: [Project Wiki](https://github.com/{{cookiecutter.author_name}}/{{cookiecutter.project_slug}}/wiki)
 

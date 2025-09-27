@@ -2,23 +2,20 @@
 Async database session management for {{cookiecutter.project_name}}.
 """
 
-import asyncio
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Optional, Union
-
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    AsyncEngine,
-    create_async_engine,
-    async_sessionmaker,
-)
-from sqlalchemy.orm import Session
-from sqlalchemy import text, event
-from sqlalchemy.engine import Engine
-from sqlalchemy.pool import StaticPool
+from typing import AsyncGenerator, Optional
 
 from app.config import get_settings
 from app.utils.logging import get_logger
+from sqlalchemy import event, text
+from sqlalchemy.engine import Engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.pool import StaticPool
 
 logger = get_logger("database_session")
 
@@ -46,7 +43,7 @@ def get_async_database_url(database_url: str) -> str:
 def create_async_database_engine() -> AsyncEngine:
     """Create async database engine with proper configuration."""
     settings = get_settings()
-    
+
     if not settings.database_url:
         # In-memory SQLite for testing
         return create_async_engine(
@@ -56,9 +53,9 @@ def create_async_database_engine() -> AsyncEngine:
             connect_args={"check_same_thread": False},
             future=True
         )
-    
+
     database_url = get_async_database_url(settings.database_url)
-    
+
     if database_url.startswith("sqlite"):
         # SQLite configuration
         return create_async_engine(
@@ -94,7 +91,7 @@ def get_async_engine() -> AsyncEngine:
     if _async_engine is None:
         _async_engine = create_async_database_engine()
         logger.info("Async database engine created")
-        
+
         # Register for monitoring
         if not _monitoring_registered:
             _register_database_monitoring(_async_engine)
@@ -106,20 +103,20 @@ def _register_database_monitoring(engine: AsyncEngine):
     """Register the database engine for monitoring."""
     try:
         from app.core.monitoring.database import db_monitoring_service
-        
+
         # Determine pool name from database URL
         settings = get_settings()
         pool_name = "default"
-        
+
         if settings.database_url:
             if "postgresql" in settings.database_url:
                 pool_name = "postgresql"
             elif "sqlite" in settings.database_url:
                 pool_name = "sqlite"
-        
+
         db_monitoring_service.register_pool(engine, pool_name)
         logger.info(f"Database monitoring registered for pool: {pool_name}")
-        
+
     except ImportError:
         logger.warning("Database monitoring not available - skipping registration")
     except Exception as e:
@@ -174,29 +171,29 @@ async def get_async_transaction() -> AsyncGenerator[AsyncSession, None]:
 
 class DatabaseManager:
     """Centralized database management for async operations."""
-    
+
     def __init__(self):
         self.engine = get_async_engine()
         self.session_factory = get_async_session_factory()
-    
+
     async def create_tables(self):
         """Create all database tables asynchronously."""
         from app.database.base import Base
-        
+
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        
+
         logger.info("Database tables created successfully")
-    
+
     async def drop_tables(self):
         """Drop all database tables asynchronously."""
         from app.database.base import Base
-        
+
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
-        
+
         logger.info("Database tables dropped successfully")
-    
+
     async def health_check(self) -> bool:
         """Check database connectivity."""
         try:
@@ -206,7 +203,7 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Database health check failed: {e}")
             return False
-    
+
     async def close(self):
         """Close database connections."""
         if self.engine:
@@ -251,7 +248,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.execute("PRAGMA journal_mode=WAL")
         # Set synchronous mode to NORMAL for better performance
         cursor.execute("PRAGMA synchronous=NORMAL")
-        # Set temp store to memory for better performance  
+        # Set temp store to memory for better performance
         cursor.execute("PRAGMA temp_store=MEMORY")
         # Set cache size to 64MB
         cursor.execute("PRAGMA cache_size=64000")
@@ -262,28 +259,28 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 async def initialize_database():
     """Initialize database tables and connections."""
     db_manager = get_database_manager()
-    
+
     # Create tables
     await db_manager.create_tables()
-    
+
     # Verify connectivity
     if not await db_manager.health_check():
         raise RuntimeError("Database initialization failed: health check failed")
-    
+
     logger.info("Database initialized successfully")
 
 
 async def cleanup_database():
     """Cleanup database connections."""
     global _async_engine, _async_session_factory, _db_manager
-    
+
     if _db_manager:
         await _db_manager.close()
         _db_manager = None
-    
+
     if _async_engine:
         await _async_engine.dispose()
         _async_engine = None
-    
+
     _async_session_factory = None
     logger.info("Database cleanup completed")

@@ -32,7 +32,7 @@ class CreateUserCommand(ICommand):
     username: str
     password: str
     full_name: str
-    
+
     def validate(self) -> Dict[str, Any]:
         errors = {}
         if not self.email or "@" not in self.email:
@@ -50,7 +50,7 @@ from app.core.cqrs import BaseCommandHandler, command_handler, transactional
 @command_handler(CreateUserCommand)
 @transactional()
 class CreateUserHandler(BaseCommandHandler[CreateUserCommand, str]):
-    
+
     async def _handle(self, command: CreateUserCommand) -> str:
         # Your business logic here
         user_id = await self.user_repository.create_user(command)
@@ -60,16 +60,16 @@ class CreateUserHandler(BaseCommandHandler[CreateUserCommand, str]):
 ### **3. Define a Query**
 
 ```python
-@dataclass 
+@dataclass
 class GetUserQuery(IQuery):
     user_id: str
-    
+
     def validate(self) -> Dict[str, Any]:
         return {"user_id": "Required"} if not self.user_id else {}
-    
+
     def get_cache_key(self) -> str:
         return f"user:{self.user_id}"
-    
+
     def get_cache_ttl(self) -> int:
         return 300  # 5 minutes
 ```
@@ -82,7 +82,7 @@ from app.core.cqrs import BaseQueryHandler, query_handler, cached_query
 @query_handler(GetUserQuery)
 @cached_query(ttl_seconds=300)
 class GetUserHandler(BaseQueryHandler[GetUserQuery, UserDto]):
-    
+
     async def _handle(self, query: GetUserQuery) -> UserDto:
         # Your data retrieval logic here
         return await self.user_repository.get_by_id(query.user_id)
@@ -179,7 +179,7 @@ class UpdateUserCommand(ICommand):
     user_id: str
     email: Optional[str] = None
     full_name: Optional[str] = None
-    
+
     def validate(self) -> Dict[str, Any]:
         errors = {}
         if not self.user_id:
@@ -187,7 +187,7 @@ class UpdateUserCommand(ICommand):
         if self.email and "@" not in self.email:
             errors["email"] = "Invalid email format"
         return errors
-    
+
     def get_aggregate_id(self) -> str:
         return self.user_id  # For event sourcing/aggregates
 ```
@@ -203,7 +203,7 @@ class FindUsersQuery(IQuery):
     role: Optional[UserRole] = None
     page: int = 1
     page_size: int = 20
-    
+
     def validate(self) -> Dict[str, Any]:
         errors = {}
         if self.page < 1:
@@ -211,10 +211,10 @@ class FindUsersQuery(IQuery):
         if not 1 <= self.page_size <= 100:
             errors["page_size"] = "Page size must be 1-100"
         return errors
-    
+
     def get_cache_key(self) -> str:
         return f"users:find:role={self.role}:page={self.page}"
-    
+
     def get_cache_ttl(self) -> int:
         return 120  # 2 minutes
 ```
@@ -229,37 +229,37 @@ Handle **write operations** with business logic:
 @authorize(permissions=["user:update"], resource_id_field="user_id")
 @retry_on_failure(max_attempts=3)
 class UpdateUserHandler(BaseCommandHandler[UpdateUserCommand, None]):
-    
+
     async def _handle(self, command: UpdateUserCommand) -> None:
         # 1. Load aggregate/entity
         user = await self.user_repository.get_by_id(command.user_id)
         if not user:
             raise ValueError("User not found")
-        
+
         # 2. Apply business logic
         if command.email:
             await self._ensure_unique_email(command.email, command.user_id)
             user.email = command.email
-        
+
         if command.full_name:
             user.full_name = command.full_name
-        
+
         user.updated_at = datetime.utcnow()
-        
+
         # 3. Save changes
         await self.user_repository.update(user)
-        
+
         # 4. Publish domain events (if needed)
         await self.event_publisher.publish(UserUpdatedEvent(user.id, ...))
-    
+
     async def _ensure_unique_email(self, email: str, exclude_user_id: str):
         existing_user = await self.user_repository.get_by_email(email)
         if existing_user and existing_user.id != exclude_user_id:
             raise ValueError("Email already in use")
-    
+
     async def _get_affected_entities(
-        self, 
-        command: UpdateUserCommand, 
+        self,
+        command: UpdateUserCommand,
         result: None
     ) -> Dict[str, Any]:
         return {
@@ -280,7 +280,7 @@ Handle **read operations** with focus on performance:
 @query_handler(FindUsersQuery)
 @cached_query(ttl_seconds=120, vary_by=["role", "page", "page_size"])
 class FindUsersHandler(BaseQueryHandler[FindUsersQuery, List[UserDto]]):
-    
+
     async def _handle(self, query: FindUsersQuery) -> List[UserDto]:
         # Use optimized read model or view
         users = await self.user_read_repository.find_users(
@@ -289,10 +289,10 @@ class FindUsersHandler(BaseQueryHandler[FindUsersQuery, List[UserDto]]):
             offset=(query.page - 1) * query.page_size,
             limit=query.page_size
         )
-        
+
         # Transform to DTOs
         return [UserDto.from_entity(user) for user in users]
-    
+
     async def _get_pagination_info(
         self,
         query: FindUsersQuery,
@@ -302,9 +302,9 @@ class FindUsersHandler(BaseQueryHandler[FindUsersQuery, List[UserDto]]):
             email_contains=query.email_contains,
             role=query.role
         )
-        
+
         total_pages = (total_count + query.page_size - 1) // query.page_size
-        
+
         return {
             "page": query.page,
             "page_size": query.page_size,
@@ -376,17 +376,17 @@ from app.core.cqrs import get_cqrs_bus
 async def audit_middleware(operation, next_handler):
     """Audit all commands and queries."""
     start_time = time.time()
-    
+
     try:
         result = await next_handler()
-        
+
         # Log successful operation
         await audit_log.record_operation(
             operation=operation,
             result="success",
             duration=time.time() - start_time
         )
-        
+
         return result
     except Exception as e:
         # Log failed operation
@@ -423,14 +423,14 @@ else:
         case OperationStatus.FAILED:
             print(f"Execution failed: {result.errors}")
 
-# Query results  
+# Query results
 result = await bus.execute_query(find_query)
 
 if result.is_success:
     users = result.data
     pagination = result.pagination
     cache_info = result.cache_info
-    
+
     print(f"Found {len(users)} users")
     print(f"Page {pagination['page']} of {pagination['total_pages']}")
     print(f"Cache hit: {cache_info['hit']}")
@@ -460,13 +460,13 @@ async def create_user(
         password=request.password,
         full_name=request.full_name
     )
-    
+
     # Set user context
     command.metadata.user_id = current_user.id  # From auth dependency
-    
+
     # Execute command
     result = await cqrs_bus.execute_command(command)
-    
+
     if result.is_failure:
         if result.status == OperationStatus.VALIDATION_ERROR:
             raise HTTPException(status_code=422, detail=result.errors)
@@ -474,7 +474,7 @@ async def create_user(
             raise HTTPException(status_code=403, detail="Access denied")
         else:
             raise HTTPException(status_code=500, detail="Internal server error")
-    
+
     return CreateUserResponse(
         user_id=result.data,
         message="User created successfully"
@@ -490,15 +490,15 @@ async def get_user(
         user_id=user_id,
         include_inactive=include_inactive
     )
-    
+
     result = await cqrs_bus.execute_query(query)
-    
+
     if result.is_failure:
         if result.status == OperationStatus.NOT_FOUND:
             raise HTTPException(status_code=404, detail="User not found")
         else:
             raise HTTPException(status_code=500, detail="Internal server error")
-    
+
     return UserResponse.from_dto(result.data)
 
 @router.get("/users", response_model=FindUsersResponse)
@@ -515,12 +515,12 @@ async def find_users(
         page=page,
         page_size=page_size
     )
-    
+
     result = await cqrs_bus.execute_query(query)
-    
+
     if result.is_failure:
         raise HTTPException(status_code=500, detail="Internal server error")
-    
+
     return FindUsersResponse(
         users=[UserResponse.from_dto(user) for user in result.data],
         pagination=result.pagination
@@ -540,7 +540,7 @@ async def get_cqrs_bus_dependency() -> CQRSBus:
 # In app/core/container.py
 def _configure_services(container: DIContainer):
     # ... other services ...
-    
+
     # Register CQRS bus as singleton
     container.register_singleton(CQRSBus, factory=get_cqrs_bus_dependency)
 ```
@@ -555,20 +555,20 @@ def _configure_services(container: DIContainer):
 @query_handler(GetUserDashboardQuery)
 @cached_query(ttl_seconds=300)
 class GetUserDashboardHandler(BaseQueryHandler):
-    
+
     async def _handle(self, query: GetUserDashboardQuery) -> UserDashboardDto:
         # Use specialized read model for dashboard
         dashboard_data = await self.dashboard_read_repository.get_user_dashboard(
             user_id=query.user_id
         )
-        
+
         # Parallel data fetching
         recent_orders, notifications, stats = await asyncio.gather(
             self.order_repository.get_recent_orders(query.user_id, limit=5),
             self.notification_repository.get_unread(query.user_id, limit=10),
             self.analytics_repository.get_user_stats(query.user_id)
         )
-        
+
         return UserDashboardDto(
             user=dashboard_data.user,
             recent_orders=recent_orders,
@@ -583,7 +583,7 @@ class GetUserDashboardHandler(BaseQueryHandler):
 @dataclass
 class BatchCreateUsersCommand(ICommand):
     users: List[CreateUserRequest]
-    
+
     def validate(self) -> Dict[str, Any]:
         errors = {}
         if not self.users:
@@ -595,19 +595,19 @@ class BatchCreateUsersCommand(ICommand):
 @command_handler(BatchCreateUsersCommand)
 @transactional()
 class BatchCreateUsersHandler(BaseCommandHandler[BatchCreateUsersCommand, List[str]]):
-    
+
     async def _handle(self, command: BatchCreateUsersCommand) -> List[str]:
         # Process in smaller chunks to avoid long transactions
         user_ids = []
         chunk_size = 10
-        
+
         for i in range(0, len(command.users), chunk_size):
             chunk = command.users[i:i + chunk_size]
             chunk_ids = await self._create_user_chunk(chunk)
             user_ids.extend(chunk_ids)
-        
+
         return user_ids
-    
+
     async def _create_user_chunk(self, users: List[CreateUserRequest]) -> List[str]:
         # Bulk operations for better performance
         return await self.user_repository.bulk_create(users)
@@ -618,28 +618,28 @@ class BatchCreateUsersHandler(BaseCommandHandler[BatchCreateUsersCommand, List[s
 ```python
 @query_handler(GetUserOrdersQuery)
 class GetUserOrdersHandler(BaseQueryHandler):
-    
+
     async def _get_cached_result(self, query: GetUserOrdersQuery):
         # Multi-level caching
-        
+
         # 1. Check memory cache first
         cache_key = query.get_cache_key()
         result = await self.memory_cache.get(cache_key)
         if result:
             return result
-        
+
         # 2. Check Redis cache
         result = await self.redis_cache.get(cache_key)
         if result:
             # Store in memory cache for faster access
             await self.memory_cache.set(cache_key, result, ttl=60)
             return result
-        
+
         return None
-    
+
     async def _cache_result(self, query: GetUserOrdersQuery, result):
         cache_key = query.get_cache_key()
-        
+
         # Store in both caches
         await asyncio.gather(
             self.memory_cache.set(cache_key, result, ttl=60),
@@ -659,11 +659,11 @@ from app.core.cqrs import CreateUserCommand
 from app.handlers.user.create_user_handler import CreateUserHandler
 
 class TestCreateUserHandler:
-    
+
     @pytest.fixture
     def handler(self):
         return CreateUserHandler()
-    
+
     @pytest.mark.asyncio
     async def test_create_user_success(self, handler):
         # Arrange
@@ -673,15 +673,15 @@ class TestCreateUserHandler:
             password="securepass123",
             full_name="Test User"
         )
-        
+
         # Act
         result = await handler.handle(command)
-        
+
         # Assert
         assert result.is_success
         assert result.data is not None
         assert result.affected_entities["created"]["user"]["email"] == "test@example.com"
-    
+
     @pytest.mark.asyncio
     async def test_create_user_validation_error(self, handler):
         # Arrange
@@ -691,10 +691,10 @@ class TestCreateUserHandler:
             password="short",
             full_name=""
         )
-        
+
         # Act
         result = await handler.handle(command)
-        
+
         # Assert
         assert result.is_failure
         assert result.status == OperationStatus.VALIDATION_ERROR
@@ -707,32 +707,32 @@ class TestCreateUserHandler:
 
 ```python
 class TestGetUserHandler:
-    
+
     @pytest.fixture
     def handler(self):
         return GetUserHandler()
-    
+
     @pytest.mark.asyncio
     async def test_get_user_success(self, handler):
         # Arrange
         query = GetUserQuery(user_id="user123")
-        
+
         # Act
         result = await handler.handle(query)
-        
+
         # Assert
         assert result.is_success
         assert result.data.id == "user123"
         assert result.cache_info is not None
-    
+
     @pytest.mark.asyncio
     async def test_get_user_not_found(self, handler):
         # Arrange
         query = GetUserQuery(user_id="nonexistent")
-        
+
         # Act
         result = await handler.handle(query)
-        
+
         # Assert
         assert result.is_success
         assert result.data is None
@@ -742,7 +742,7 @@ class TestGetUserHandler:
 
 ```python
 class TestUserManagementFlow:
-    
+
     @pytest.mark.asyncio
     async def test_complete_user_lifecycle(self, cqrs_bus):
         # Create user
@@ -752,26 +752,26 @@ class TestUserManagementFlow:
             password="securepass123",
             full_name="Integration User"
         )
-        
+
         create_result = await cqrs_bus.execute_command(create_command)
         assert create_result.is_success
         user_id = create_result.data
-        
+
         # Get user
         get_query = GetUserQuery(user_id=user_id)
         get_result = await cqrs_bus.execute_query(get_query)
         assert get_result.is_success
         assert get_result.data.email == "integration@example.com"
-        
+
         # Update user
         update_command = UpdateUserCommand(
             user_id=user_id,
             full_name="Updated Integration User"
         )
-        
+
         update_result = await cqrs_bus.execute_command(update_command)
         assert update_result.is_success
-        
+
         # Verify update
         get_result = await cqrs_bus.execute_query(get_query)
         assert get_result.data.full_name == "Updated Integration User"
@@ -791,11 +791,11 @@ from app.handlers import user_handlers, order_handlers, payment_handlers
 async def setup_cqrs():
     """Initialize CQRS bus with all handlers."""
     cqrs_bus = initialize_cqrs_bus(allow_handler_override=False)
-    
+
     # Handlers auto-register via decorators, but you can also register manually:
     # cqrs_bus.register_command_handlers(user_handlers.get_command_handlers())
     # cqrs_bus.register_query_handlers(user_handlers.get_query_handlers())
-    
+
     logger.info(f"CQRS bus initialized with {cqrs_bus.get_handler_count()['total']} handlers")
     return cqrs_bus
 
@@ -813,28 +813,28 @@ async def metrics_middleware(operation, next_handler):
     """Collect metrics for all CQRS operations."""
     operation_type = "command" if hasattr(operation, 'get_command_name') else "query"
     operation_name = operation.get_command_name() if operation_type == "command" else operation.get_query_name()
-    
+
     # Start timer
     start_time = time.time()
-    
+
     # Increment counter
     CQRS_OPERATIONS_TOTAL.labels(
         operation_type=operation_type,
         operation_name=operation_name
     ).inc()
-    
+
     try:
         result = await next_handler()
-        
+
         # Record success metrics
         CQRS_OPERATIONS_DURATION.labels(
             operation_type=operation_type,
             operation_name=operation_name,
             status="success"
         ).observe(time.time() - start_time)
-        
+
         return result
-        
+
     except Exception as e:
         # Record error metrics
         CQRS_OPERATIONS_DURATION.labels(
@@ -842,13 +842,13 @@ async def metrics_middleware(operation, next_handler):
             operation_name=operation_name,
             status="error"
         ).observe(time.time() - start_time)
-        
+
         CQRS_OPERATIONS_ERRORS.labels(
             operation_type=operation_type,
             operation_name=operation_name,
             error_type=type(e).__name__
         ).inc()
-        
+
         raise
 ```
 
@@ -872,7 +872,7 @@ async def error_handling_middleware(operation, next_handler):
             },
             exc_info=True
         )
-        
+
         # Send alert for critical errors
         if isinstance(e, (DatabaseError, ExternalServiceError)):
             await alert_service.send_alert(
@@ -880,7 +880,7 @@ async def error_handling_middleware(operation, next_handler):
                 message=f"CQRS operation failed: {e}",
                 context={"operation": operation.__class__.__name__}
             )
-        
+
         raise
 ```
 
@@ -891,7 +891,7 @@ async def error_handling_middleware(operation, next_handler):
 ### **1. Command Design**
 - ✅ Use **imperative names** (CreateUser, UpdateOrder, CancelPayment)
 - ✅ Include **all required data** for the operation
-- ✅ Implement **thorough validation** 
+- ✅ Implement **thorough validation**
 - ✅ Make commands **immutable** (dataclasses with frozen=True)
 - ✅ Include **business context** in command names
 

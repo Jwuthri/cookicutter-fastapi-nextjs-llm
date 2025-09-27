@@ -2,13 +2,12 @@
 Health check commands.
 """
 
-import asyncio
 from datetime import datetime
 
 import click
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
+from rich.table import Table
 
 console = Console()
 
@@ -16,7 +15,6 @@ console = Console()
 @click.group()
 def health():
     """Run health checks."""
-    pass
 
 
 @health.command()
@@ -26,20 +24,20 @@ def health():
 )
 def check(service):
     """Run comprehensive health checks."""
-    
+
     if service:
         console.print(f"[bold blue]Checking {service} health...[/bold blue]")
         result = _check_service_health(service)
         _display_service_result(service, result)
     else:
         console.print("[bold blue]Running comprehensive health check...[/bold blue]")
-        
+
         services = ["redis", "database", "llm", "cache", "message_queue"]
         results = {}
-        
+
         for svc in services:
             results[svc] = _check_service_health(svc)
-        
+
         _display_health_table(results)
 
 
@@ -137,43 +135,43 @@ def _display_service_result(service: str, result: dict):
     """Display single service health result."""
     status = "✓ Healthy" if result.get("healthy") else "✗ Unhealthy"
     color = "green" if result.get("healthy") else "red"
-    
+
     panel_content = f"[{color}]{status}[/{color}]\n"
-    
+
     if result.get("healthy"):
         for key, value in result.items():
             if key != "healthy":
                 panel_content += f"{key.title()}: {value}\n"
     else:
         panel_content += f"Error: {result.get('error', 'Unknown error')}"
-    
+
     console.print(Panel.fit(panel_content, title=f"{service.title()} Health"))
 
 
 def _display_health_table(results: dict):
     """Display health results in a table."""
     table = Table(title=f"System Health Check - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
+
     table.add_column("Service", style="cyan")
     table.add_column("Status", style="bold")
     table.add_column("Response Time", style="yellow")
     table.add_column("Details", style="dim")
-    
+
     overall_healthy = True
-    
+
     for service, result in results.items():
         healthy = result.get("healthy", False)
         if not healthy:
             overall_healthy = False
-            
+
         status = "[green]✓ Healthy[/green]" if healthy else "[red]✗ Unhealthy[/red]"
         response_time = result.get("response_time", "N/A")
         details = result.get("details", result.get("error", "N/A"))
-        
+
         table.add_row(service.title(), status, response_time, details)
-    
+
     console.print(table)
-    
+
     overall_status = "[green]✓ All systems operational[/green]" if overall_healthy else "[red]⚠ Some systems need attention[/red]"
     console.print(f"\nOverall Status: {overall_status}")
 
@@ -183,24 +181,24 @@ def monitor():
     """Continuous health monitoring."""
     console.print("[bold blue]Starting continuous health monitoring...[/bold blue]")
     console.print("[dim]Press Ctrl+C to stop[/dim]\n")
-    
+
     try:
         while True:
             import time
-            
+
             # Clear screen
             console.clear()
-            
+
             services = ["redis", "database", "llm", "cache"]
             results = {}
-            
+
             for svc in services:
                 results[svc] = _check_service_health(svc)
-            
+
             _display_health_table(results)
-            
+
             console.print(f"\n[dim]Last updated: {datetime.now().strftime('%H:%M:%S')} | Refreshing in 10s...[/dim]")
             time.sleep(10)
-            
+
     except KeyboardInterrupt:
         console.print("\n[yellow]Monitoring stopped[/yellow]")

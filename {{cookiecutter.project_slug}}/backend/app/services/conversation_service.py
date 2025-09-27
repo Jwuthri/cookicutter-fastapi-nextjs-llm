@@ -4,10 +4,10 @@ Conversation service for {{cookiecutter.project_name}}.
 
 from typing import List, Optional
 
+from app.config import Settings
 from app.core.memory.base import MemoryInterface
 from app.models.chat import ChatMessage, ChatSession
-from app.config import Settings
-from app.exceptions import NotFoundError
+
 from ..utils.logging import get_logger
 
 logger = get_logger("conversation_service")
@@ -15,14 +15,14 @@ logger = get_logger("conversation_service")
 
 class ConversationService:
     """Service for managing conversations and sessions."""
-    
+
     def __init__(self, memory_store: MemoryInterface, settings: Settings):
         self.memory = memory_store
         self.settings = settings
-    
+
     async def get_session(
-        self, 
-        session_id: str, 
+        self,
+        session_id: str,
         user_id: Optional[str] = None
     ) -> Optional[ChatSession]:
         """Get a chat session by ID."""
@@ -31,9 +31,9 @@ class ConversationService:
         except Exception as e:
             logger.error(f"Error getting session {session_id}: {e}")
             return None
-    
+
     async def list_sessions(
-        self, 
+        self,
         user_id: Optional[str] = None,
         limit: int = 50,
         offset: int = 0
@@ -44,10 +44,10 @@ class ConversationService:
         except Exception as e:
             logger.error(f"Error listing sessions: {e}")
             return []
-    
+
     async def delete_session(
-        self, 
-        session_id: str, 
+        self,
+        session_id: str,
         user_id: Optional[str] = None
     ) -> bool:
         """Delete a chat session."""
@@ -59,7 +59,7 @@ class ConversationService:
         except Exception as e:
             logger.error(f"Error deleting session {session_id}: {e}")
             return False
-    
+
     async def get_session_messages(
         self,
         session_id: str,
@@ -73,7 +73,7 @@ class ConversationService:
         except Exception as e:
             logger.error(f"Error getting messages for session {session_id}: {e}")
             return []
-    
+
     async def clear_session_messages(
         self,
         session_id: str,

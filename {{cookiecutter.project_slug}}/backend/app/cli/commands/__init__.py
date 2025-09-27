@@ -2,20 +2,11 @@
 CLI commands package.
 """
 
-from . import (
-    cache,
-    database,
-    health,
-    llm,
-    logs,
-    server,
-    setup,
-    worker
-)
+from . import cache, database, health, llm, logs, server, setup, worker
 
 __all__ = [
     "cache",
-    "database", 
+    "database",
     "health",
     "llm",
     "logs",

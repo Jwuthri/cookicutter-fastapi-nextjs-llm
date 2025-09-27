@@ -7,15 +7,17 @@ A modern, responsive Next.js frontend for AI-powered chat applications with real
 ## 🚀 Features
 
 ### Core Features
+
 - **💬 Interactive Chat Interface**: Beautiful, responsive chat UI with message history
 - **🔐 Authentication**: Clerk.com integration with Google social login support
 - **🚀 Real-time Messaging**: {% if cookiecutter.use_websockets == "yes" %}WebSocket support for instant communication{% else %}HTTP-based messaging with optimized polling{% endif %}
 - **🎨 Modern UI Components**: Custom-built components with consistent design system
-- **📱 Responsive Design**: Mobile-first approach that works on all devices  
+- **📱 Responsive Design**: Mobile-first approach that works on all devices
 - **⚡ Fast Performance**: Optimized with Next.js 14+ App Router for lightning-fast loading
 - **🔄 State Management**: Efficient context-based state management for chat sessions
 
 ### User Experience
+
 - **👤 User Authentication**: Secure sign-in/sign-up with Google social login
 - **🔒 Protected Routes**: Automatic redirection for unauthenticated users
 - **💭 Typing Indicators**: Visual feedback during AI response generation
@@ -26,6 +28,7 @@ A modern, responsive Next.js frontend for AI-powered chat applications with real
 - **📧 Toast Notifications**: User-friendly error and success messages
 
 ### Technical Features
+
 - **📦 Component Library**: Reusable UI components built with TypeScript
 - **🎣 Custom Hooks**: Specialized React hooks for chat functionality
 - **🔧 Configuration Management**: Environment-based settings
@@ -35,6 +38,7 @@ A modern, responsive Next.js frontend for AI-powered chat applications with real
 ## 🏗️ Architecture
 
 ### Project Structure
+
 ```
 ├── src/
 │   ├── app/                    # Next.js 13+ App Router
@@ -74,10 +78,12 @@ A modern, responsive Next.js frontend for AI-powered chat applications with real
 ### Key Components
 
 **Chat Components**:
+
 - `ChatContainer`: Complete chat interface with header, messages, and input
 - `MessageItem`: Individual message display with role-based styling and animations
 
 **UI Components**:
+
 - `Button`: Customizable button with variants
 - `Input`: Form input with validation states
 - `Card`: Container component for content sections
@@ -85,6 +91,7 @@ A modern, responsive Next.js frontend for AI-powered chat applications with real
 - `Toast`: Notification system
 
 **Providers**:
+
 - `ChatProvider`: Global chat state management
 - `ThemeProvider`: Theme switching functionality
 - `ToastProvider`: Notification management
@@ -93,7 +100,7 @@ A modern, responsive Next.js frontend for AI-powered chat applications with real
 
 ### Prerequisites
 
-- **Node.js**: 18.0+ 
+- **Node.js**: 18.0+
 - **npm/yarn/pnpm**: Latest version
 - **Backend API**: {{cookiecutter.project_name}} Backend running on port {{cookiecutter.backend_port}}
 
@@ -104,7 +111,7 @@ A modern, responsive Next.js frontend for AI-powered chat applications with real
 npm install
 # or
 yarn install
-# or  
+# or
 pnpm install
 ```
 
@@ -160,6 +167,7 @@ The frontend will automatically connect to your backend API.
 The application uses a custom design system built on top of modern CSS:
 
 **Colors**:
+
 - Primary: Blue gradient (#3B82F6 → #1D4ED8)
 - Secondary: Gray scale (#F8FAFC → #0F172A)
 - Success: Green (#10B981)
@@ -167,11 +175,13 @@ The application uses a custom design system built on top of modern CSS:
 - Error: Red (#EF4444)
 
 **Typography**:
+
 - Font Family: Inter (system fallback)
 - Scale: 12px → 48px with consistent rhythm
 - Weight: 400, 500, 600, 700
 
 **Spacing**:
+
 - Base unit: 4px
 - Scale: 4px, 8px, 12px, 16px, 24px, 32px, 48px, 64px
 
@@ -181,15 +191,15 @@ The application uses a custom design system built on top of modern CSS:
 // src/lib/theme.ts
 export const theme = {
   colors: {
-    primary: 'hsl(221.2 83.2% 53.3%)',
-    secondary: 'hsl(210 40% 98%)',
+    primary: "hsl(221.2 83.2% 53.3%)",
+    secondary: "hsl(210 40% 98%)",
     // ... more colors
   },
   fonts: {
-    sans: ['Inter', 'system-ui', 'sans-serif'],
+    sans: ["Inter", "system-ui", "sans-serif"],
   },
   // ... more theme options
-}
+};
 ```
 
 ### Dark Mode
@@ -213,14 +223,14 @@ const { theme, setTheme } = useTheme()
 The chat interface supports various message types:
 
 ```typescript
-type MessageRole = 'user' | 'assistant' | 'system'
+type MessageRole = "user" | "assistant" | "system";
 
 interface ChatMessage {
-  id: string
-  content: string
-  role: MessageRole
-  timestamp: string
-  metadata?: Record<string, any>
+  id: string;
+  content: string;
+  role: MessageRole;
+  timestamp: string;
+  metadata?: Record<string, any>;
 }
 ```
 
@@ -230,40 +240,38 @@ Automatic session handling:
 
 ```typescript
 // Custom hook for chat functionality
-const {
-  messages,
-  sendMessage,
-  isLoading,
-  error,
-  clearChat,
-  sessionId
-} = useChat()
+const { messages, sendMessage, isLoading, error, clearChat, sessionId } =
+  useChat();
 
 // Send a message
-await sendMessage("Hello, how can you help me?")
+await sendMessage("Hello, how can you help me?");
 ```
 
 ### Real-time Updates
 
 {% if cookiecutter.use_websockets == "yes" %}
 **WebSocket Integration**:
+
 ```typescript
 // WebSocket connection management
 const { connected, reconnect } = useWebSocket({
   url: process.env.NEXT_PUBLIC_WS_URL,
   onMessage: handleNewMessage,
-  onError: handleConnectionError
-})
+  onError: handleConnectionError,
+});
 ```
+
 {% else %}
 **HTTP Polling**:
+
 ```typescript
 // Optimized polling for message updates
 const { messages, refresh } = useChatPolling({
   interval: 1000, // 1 second
-  enabled: isActive
-})
+  enabled: isActive,
+});
 ```
+
 {% endif %}
 
 ### Message Features
@@ -281,11 +289,13 @@ const { messages, refresh } = useChatPolling({
 ```typescript
 // src/lib/api.ts
 export const apiConfig = {
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:{{cookiecutter.backend_port}}',
+  baseURL:
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:{{cookiecutter.backend_port}}",
   timeout: 30000,
   retries: 3,
-  retryDelay: 1000
-}
+  retryDelay: 1000,
+};
 ```
 
 ### Chat Settings
@@ -297,8 +307,8 @@ export const CHAT_SETTINGS = {
   AUTO_SAVE_INTERVAL: 5000,
   MAX_MESSAGES_DISPLAY: 100,
   TYPING_INDICATOR_DELAY: 500,
-  RECONNECT_ATTEMPTS: 5
-}
+  RECONNECT_ATTEMPTS: 5,
+};
 ```
 
 ### Feature Flags
@@ -344,12 +354,10 @@ npm run test:e2e
 ### Code Quality
 
 **ESLint Configuration**:
+
 ```json
 {
-  "extends": [
-    "next/core-web-vitals",
-    "@typescript-eslint/recommended"
-  ],
+  "extends": ["next/core-web-vitals", "@typescript-eslint/recommended"],
   "rules": {
     "no-unused-vars": "error",
     "@typescript-eslint/no-unused-vars": "error"
@@ -358,6 +366,7 @@ npm run test:e2e
 ```
 
 **TypeScript Strict Mode**:
+
 ```json
 {
   "compilerOptions": {
@@ -371,12 +380,14 @@ npm run test:e2e
 ### Testing
 
 **Unit Testing** (Jest + Testing Library):
+
 ```bash
 # Run unit tests
 npm run test
 ```
 
 **End-to-End Testing** (Playwright):
+
 ```bash
 # Run E2E tests
 npm run test:e2e
@@ -466,6 +477,7 @@ npm run build && npm run export
 ### Environment Variables for Production
 
 **Required**:
+
 ```bash
 # Authentication
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_your-clerk-publishable-key
@@ -476,6 +488,7 @@ NEXT_PUBLIC_WS_URL=wss://your-backend-api.com  # if WebSocket enabled
 ```
 
 **Optional**:
+
 ```bash
 NEXT_PUBLIC_APP_NAME="Your App Name"
 NEXT_PUBLIC_ANALYTICS_ID=your-analytics-id
@@ -509,16 +522,16 @@ export function NewComponent({ className, children }: NewComponentProps) {
 
 ```typescript
 // src/hooks/use-custom-hook.ts
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 
 export function useCustomHook() {
-  const [state, setState] = useState(null)
-  
+  const [state, setState] = useState(null);
+
   useEffect(() => {
     // Custom logic
-  }, [])
-  
-  return { state, setState }
+  }, []);
+
+  return { state, setState };
 }
 ```
 
@@ -528,11 +541,11 @@ export function useCustomHook() {
 // Using Tailwind CSS classes
 <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900 rounded-lg shadow-sm">
   <span className="text-gray-900 dark:text-gray-100">Content</span>
-</div>
+</div>;
 
 // Using CSS modules (optional)
-import styles from './component.module.css'
-<div className={styles.container}>Content</div>
+import styles from "./component.module.css";
+<div className={styles.container}>Content</div>;
 ```
 
 ## 🐛 Troubleshooting
@@ -540,6 +553,7 @@ import styles from './component.module.css'
 ### Common Issues
 
 **Backend Connection Issues**:
+
 ```bash
 # Check if backend is running
 curl http://localhost:{{cookiecutter.backend_port}}/health
@@ -549,6 +563,7 @@ echo $NEXT_PUBLIC_API_URL
 ```
 
 **Build Errors**:
+
 ```bash
 # Clear Next.js cache
 rm -rf .next
@@ -559,6 +574,7 @@ npm install
 ```
 
 **TypeScript Errors**:
+
 ```bash
 # Run type checking
 npm run type-check
@@ -569,6 +585,7 @@ npm run build
 
 **WebSocket Connection Issues**:
 {% if cookiecutter.use_websockets == "yes" %}
+
 ```bash
 # Test WebSocket connection
 wscat -c ws://localhost:{{cookiecutter.backend_port}}/ws/test-session
@@ -576,11 +593,14 @@ wscat -c ws://localhost:{{cookiecutter.backend_port}}/ws/test-session
 # Check browser console for connection errors
 # Verify NEXT_PUBLIC_WS_URL is correctly set
 ```
+
 {% else %}
+
 ```bash
 # WebSocket not enabled in this configuration
 # Messages use HTTP polling instead
 ```
+
 {% endif %}
 
 ### Debug Mode
@@ -672,19 +692,19 @@ GET  /api/v1/health/            // Health check
 ### API Client Usage
 
 ```typescript
-import { apiClient } from '@/lib/api'
+import { apiClient } from "@/lib/api";
 
 // Send message
-const response = await apiClient.post('/chat/', {
-  message: 'Hello',
-  session_id: sessionId
-})
+const response = await apiClient.post("/chat/", {
+  message: "Hello",
+  session_id: sessionId,
+});
 
 // Handle errors
 try {
-  const data = await apiClient.get('/chat/sessions')
+  const data = await apiClient.get("/chat/sessions");
 } catch (error) {
-  console.error('API Error:', error.message)
+  console.error("API Error:", error.message);
 }
 ```
 
@@ -704,18 +724,18 @@ try {
 // next.config.js
 const securityHeaders = [
   {
-    key: 'X-DNS-Prefetch-Control',
-    value: 'on'
+    key: "X-DNS-Prefetch-Control",
+    value: "on",
   },
   {
-    key: 'Strict-Transport-Security',
-    value: 'max-age=63072000; includeSubDomains; preload'
+    key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains; preload",
   },
   {
-    key: 'X-Frame-Options',
-    value: 'SAMEORIGIN'
-  }
-]
+    key: "X-Frame-Options",
+    value: "SAMEORIGIN",
+  },
+];
 ```
 
 ## 📄 License

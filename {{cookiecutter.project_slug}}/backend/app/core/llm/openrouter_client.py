@@ -3,18 +3,18 @@ Agno + OpenRouter LLM client implementation for {{cookiecutter.project_name}}.
 Unified access to 500+ models through Agno's powerful agent framework.
 """
 
-from typing import List, Optional, Dict, Any, AsyncGenerator
 import os
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from app.core.llm.base import BaseLLMClient
-from app.models.chat import ChatMessage
 from app.exceptions import LLMError
+from app.models.chat import ChatMessage
 from app.utils.logging import get_logger
 
 try:
     from agno.agent import Agent
-    from agno.models.openrouter import OpenRouter
     from agno.models.message import Message
+    from agno.models.openrouter import OpenRouter
 except ImportError:
     Agent = None
     OpenRouter = None
@@ -25,26 +25,26 @@ logger = get_logger("openrouter_client")
 
 class AgnoOpenRouterClient(BaseLLMClient):
     """Agno + OpenRouter unified LLM client implementation."""
-    
+
     def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
-        
+
         if Agent is None or OpenRouter is None:
             raise ImportError("Agno package not installed. Install with: uv add agno")
-        
+
         self.api_key = config.get("api_key") or os.getenv("OPENROUTER_API_KEY")
         self.model = config.get("model", "{{cookiecutter.default_model}}")
         self.max_tokens = config.get("max_tokens", 1000)
         self.temperature = config.get("temperature", 0.7)
         self.site_url = config.get("site_url", "{{cookiecutter.project_name}}")
         self.app_name = config.get("app_name", "{{cookiecutter.project_name}}")
-        
+
         if not self.api_key:
             raise ValueError("OpenRouter API key is required")
-        
+
         # Set OpenRouter API key as environment variable for Agno
         os.environ["OPENROUTER_API_KEY"] = self.api_key
-        
+
         # Initialize Agno agent with OpenRouter model
         self.agent = Agent(
             model=OpenRouter(id=self.model),
@@ -57,9 +57,9 @@ class AgnoOpenRouterClient(BaseLLMClient):
             # Add instructions/system prompt support
             instructions=config.get("instructions", None)
         )
-        
+
         logger.info(f"Agno OpenRouter agent initialized with model: {self.model}")
-    
+
     async def generate_response(
         self,
         message: str,
@@ -72,7 +72,7 @@ class AgnoOpenRouterClient(BaseLLMClient):
             # Update agent instructions if system prompt provided
             if system_prompt and system_prompt != self.agent.instructions:
                 self.agent.instructions = system_prompt
-            
+
             # Add conversation history to agent memory if provided
             if conversation_history:
                 for msg in conversation_history:
@@ -81,10 +81,10 @@ class AgnoOpenRouterClient(BaseLLMClient):
                         role=msg.role.value,
                         content=msg.content
                     )
-            
+
             # Generate response using Agno agent
             response = self.agent.run(message)
-            
+
             # Return the agent's response content
             if hasattr(response, 'content'):
                 return response.content
@@ -92,11 +92,11 @@ class AgnoOpenRouterClient(BaseLLMClient):
                 return response
             else:
                 return str(response)
-            
+
         except Exception as e:
             logger.error(f"Error generating Agno response: {e}")
             raise LLMError(f"Failed to generate response: {str(e)}")
-    
+
     async def generate_completion(
         self,
         prompt: str,
@@ -120,10 +120,10 @@ class AgnoOpenRouterClient(BaseLLMClient):
                 )
             elif system_message:
                 agent_to_use.instructions = system_message
-            
+
             # Generate completion using Agno agent
             response = agent_to_use.run(prompt)
-            
+
             # Return the agent's response content
             if hasattr(response, 'content'):
                 return response.content
@@ -131,11 +131,11 @@ class AgnoOpenRouterClient(BaseLLMClient):
                 return response
             else:
                 return str(response)
-            
+
         except Exception as e:
             logger.error(f"Error generating Agno completion: {e}")
             raise LLMError(f"Failed to generate completion: {str(e)}")
-    
+
     async def generate_streaming_completion(
         self,
         prompt: str,
@@ -154,20 +154,20 @@ class AgnoOpenRouterClient(BaseLLMClient):
             response = await self.generate_completion(
                 prompt, max_tokens, temperature, top_p, stop_sequences, system_message, model, **kwargs
             )
-            
+
             # Simulate streaming by yielding chunks
             chunk_size = 10  # characters per chunk
             for i in range(0, len(response), chunk_size):
                 yield response[i:i + chunk_size]
-                    
+
         except Exception as e:
             logger.error(f"Error generating streaming Agno completion: {e}")
             raise LLMError(f"Failed to generate streaming completion: {str(e)}")
-    
+
     def get_model_name(self) -> str:
         """Get the current model name."""
         return self.model
-    
+
     async def health_check(self) -> bool:
         """Check Agno + OpenRouter health."""
         try:
@@ -177,7 +177,7 @@ class AgnoOpenRouterClient(BaseLLMClient):
         except Exception as e:
             logger.error(f"Health check failed: {e}")
             return False
-    
+
     def get_provider_info(self) -> Dict[str, Any]:
         """Get Agno + OpenRouter provider information."""
         return {
@@ -194,35 +194,35 @@ class AgnoOpenRouterClient(BaseLLMClient):
             "supports_tools": True,
             "agno_framework": True
         }
-    
+
     def get_available_models(self) -> List[str]:
         """Get list of popular available models on OpenRouter via Agno."""
         return [
             # Latest and Greatest
             "gpt-5",  # New GPT-5
-            "anthropic/claude-3.7-sonnet", 
+            "anthropic/claude-3.7-sonnet",
             "google/gemini-2.5-pro",
-            
+
             # Production Ready
             "openai/gpt-4o",
             "anthropic/claude-3.5-sonnet",
             "google/gemini-1.5-pro",
-            
+
             # Fast & Efficient
-            "openai/gpt-4o-mini", 
+            "openai/gpt-4o-mini",
             "anthropic/claude-3-haiku",
             "google/gemini-1.5-flash",
-            
+
             # Open Source Leaders
             "meta-llama/llama-3.3-70b-instruct",
             "deepseek/deepseek-chat",
             "qwen/qwen-2.5-72b-instruct"
         ]
-    
+
     def switch_model(self, model: str) -> None:
         """Switch to a different model by creating a new Agno agent."""
         self.model = model
-        
+
         # Create new agent with the new model
         self.agent = Agent(
             model=OpenRouter(id=model),
@@ -231,9 +231,9 @@ class AgnoOpenRouterClient(BaseLLMClient):
             memory=True,
             instructions=self.agent.instructions if hasattr(self.agent, 'instructions') else None
         )
-        
+
         logger.info(f"Switched Agno agent to model: {model}")
-    
+
     def get_model_info(self, model: str) -> Dict[str, Any]:
         """Get information about a specific model via Agno + OpenRouter."""
         return {

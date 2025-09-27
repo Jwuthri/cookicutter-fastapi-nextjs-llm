@@ -28,7 +28,7 @@ from datetime import datetime
 class ChatRequest(BaseModel):
     message: str = Field(..., description="The user's message", min_length=1)
     session_id: Optional[str] = Field(default=None, description="Session identifier")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -90,7 +90,7 @@ from app.core.cqrs.bus import get_cqrs_bus
 # Execute command
 result = await get_cqrs_bus().execute_command(CreateChatSessionCommand(...))
 
-# Execute query  
+# Execute query
 result = await get_cqrs_bus().execute_query(GetChatHistoryQuery(...))
 ```
 
@@ -121,7 +121,7 @@ result = await get_cqrs_bus().execute_query(GetChatHistoryQuery(...))
 ## Security
 - Validate all inputs using Pydantic models
 - Implement rate limiting on API endpoints
-- Use Clerk authentication for user management  
+- Use Clerk authentication for user management
 - Sanitize inputs to prevent injection attacks
 - Follow principle of least privilege
 

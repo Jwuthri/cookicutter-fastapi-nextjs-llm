@@ -2,8 +2,8 @@
 Celery application configuration and setup for {{cookiecutter.project_name}}.
 """
 
-from celery import Celery
 from app.config import get_settings
+from celery import Celery
 
 settings = get_settings()
 
@@ -27,7 +27,7 @@ celery_app.conf.update(
     result_serializer='json',
     timezone='UTC',
     enable_utc=True,
-    
+
     # Result backend settings
     result_expires=settings.celery_result_expires,
     result_backend_transport_options={
@@ -37,25 +37,25 @@ celery_app.conf.update(
             'timeout': 5.0
         }
     },
-    
+
     # Task execution settings
     task_always_eager=settings.celery_task_always_eager,
     task_eager_propagates=True,
     task_ignore_result=False,
     task_store_eager_result=True,
-    
+
     # Worker settings
     worker_prefetch_multiplier=settings.celery_worker_prefetch_multiplier,
     worker_max_tasks_per_child=settings.celery_worker_max_tasks_per_child,
     worker_disable_rate_limits=False,
-    
+
     # Routing
     task_routes=settings.celery_task_routes,
-    
+
     # Monitoring
     worker_send_task_events=True,
     task_send_sent_event=True,
-    
+
     # Error handling
     task_reject_on_worker_lost=True,
     task_acks_late=True,

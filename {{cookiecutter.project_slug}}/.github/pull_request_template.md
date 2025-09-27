@@ -61,7 +61,7 @@
 - [ ] 🎨 UI/UX changes look good (if applicable)
 
 ---
-<!-- 
-🎉 Thank you for contributing to {{cookiecutter.project_name}}! 
+<!--
+🎉 Thank you for contributing to {{cookiecutter.project_name}}!
 Your efforts help make this project better for everyone.
 -->

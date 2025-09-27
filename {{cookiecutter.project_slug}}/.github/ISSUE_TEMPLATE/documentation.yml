@@ -8,9 +8,9 @@ body:
     attributes:
       value: |
         ## 📚 Documentation Issue
-        
+
         Help us improve our documentation! Whether it's missing info, outdated content, or unclear explanations - we want to know about it.
-        
+
         ---
 
   - type: dropdown

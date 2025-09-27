@@ -4,12 +4,12 @@ CQRS interfaces and base types for {{cookiecutter.project_name}}.
 Defines the core abstractions for Command Query Responsibility Segregation pattern.
 """
 
-from abc import ABC, abstractmethod
-from typing import Any, Dict, Generic, TypeVar, Optional, Type, Union
-from dataclasses import dataclass
-from enum import Enum
 import uuid
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, Generic, Optional, Type, TypeVar
 
 # Type variables for generic command/query handling
 TCommand = TypeVar('TCommand', bound='ICommand')
@@ -36,7 +36,7 @@ class OperationMetadata:
     correlation_id: Optional[str] = None
     source: Optional[str] = None
     version: Optional[str] = None
-    
+
     @classmethod
     def create(
         cls,
@@ -59,29 +59,28 @@ class OperationMetadata:
 class ICommand(ABC):
     """
     Base interface for all commands (write operations).
-    
+
     Commands represent intentions to change system state and should be named
     with verbs in the imperative form (e.g., CreateUser, UpdateProfile).
     """
-    
+
     def __init__(self):
         self.metadata = OperationMetadata.create()
-    
+
     @abstractmethod
     def validate(self) -> Dict[str, Any]:
         """
         Validate command data.
-        
+
         Returns:
             Dict containing validation results. Empty dict means valid.
             Non-empty dict should contain field names as keys and error messages as values.
         """
-        pass
-    
+
     def get_command_name(self) -> str:
         """Get the command name (defaults to class name)."""
         return self.__class__.__name__
-    
+
     def get_aggregate_id(self) -> Optional[str]:
         """Get the ID of the aggregate this command targets (if applicable)."""
         return getattr(self, 'id', None) or getattr(self, 'aggregate_id', None)
@@ -90,32 +89,31 @@ class ICommand(ABC):
 class IQuery(ABC):
     """
     Base interface for all queries (read operations).
-    
+
     Queries represent requests for data and should be named with nouns
     or questions (e.g., GetUser, FindActiveUsers, UserExists).
     """
-    
+
     def __init__(self):
         self.metadata = OperationMetadata.create()
-    
+
     @abstractmethod
     def validate(self) -> Dict[str, Any]:
         """
         Validate query parameters.
-        
+
         Returns:
             Dict containing validation results. Empty dict means valid.
         """
-        pass
-    
+
     def get_query_name(self) -> str:
         """Get the query name (defaults to class name)."""
         return self.__class__.__name__
-    
+
     def get_cache_key(self) -> Optional[str]:
         """Get cache key for this query (if cacheable)."""
         return None
-    
+
     def get_cache_ttl(self) -> Optional[int]:
         """Get cache TTL in seconds for this query."""
         return None
@@ -124,23 +122,23 @@ class IQuery(ABC):
 @dataclass
 class CommandResult(Generic[TResult]):
     """Result of a command execution."""
-    
+
     status: OperationStatus
     data: Optional[TResult] = None
     errors: Optional[Dict[str, Any]] = None
     metadata: Optional[OperationMetadata] = None
     affected_entities: Optional[Dict[str, Any]] = None
-    
+
     @property
     def is_success(self) -> bool:
         """Check if command was successful."""
         return self.status == OperationStatus.SUCCESS
-    
+
     @property
     def is_failure(self) -> bool:
         """Check if command failed."""
         return self.status != OperationStatus.SUCCESS
-    
+
     @classmethod
     def success(
         cls,
@@ -155,7 +153,7 @@ class CommandResult(Generic[TResult]):
             metadata=metadata,
             affected_entities=affected_entities
         )
-    
+
     @classmethod
     def failure(
         cls,
@@ -169,7 +167,7 @@ class CommandResult(Generic[TResult]):
             errors=errors or {},
             metadata=metadata
         )
-    
+
     @classmethod
     def validation_error(
         cls,
@@ -187,24 +185,24 @@ class CommandResult(Generic[TResult]):
 @dataclass
 class QueryResult(Generic[TResult]):
     """Result of a query execution."""
-    
+
     status: OperationStatus
     data: Optional[TResult] = None
     errors: Optional[Dict[str, Any]] = None
     metadata: Optional[OperationMetadata] = None
     pagination: Optional[Dict[str, Any]] = None
     cache_info: Optional[Dict[str, Any]] = None
-    
+
     @property
     def is_success(self) -> bool:
         """Check if query was successful."""
         return self.status == OperationStatus.SUCCESS
-    
+
     @property
     def is_failure(self) -> bool:
         """Check if query failed."""
         return self.status != OperationStatus.SUCCESS
-    
+
     @classmethod
     def success(
         cls,
@@ -221,7 +219,7 @@ class QueryResult(Generic[TResult]):
             pagination=pagination,
             cache_info=cache_info
         )
-    
+
     @classmethod
     def failure(
         cls,
@@ -235,7 +233,7 @@ class QueryResult(Generic[TResult]):
             errors=errors or {},
             metadata=metadata
         )
-    
+
     @classmethod
     def not_found(
         cls,
@@ -253,32 +251,31 @@ class QueryResult(Generic[TResult]):
 class ICommandHandler(ABC, Generic[TCommand, TResult]):
     """
     Base interface for command handlers.
-    
+
     Command handlers contain the business logic for executing commands
     and should ensure data consistency and business rule enforcement.
     """
-    
+
     @abstractmethod
     async def handle(self, command: TCommand) -> CommandResult[TResult]:
         """
         Execute the command and return the result.
-        
+
         Args:
             command: The command to execute
-            
+
         Returns:
             CommandResult containing the execution result
-            
+
         Raises:
             Should not raise exceptions - wrap in CommandResult instead
         """
-        pass
-    
+
     def get_command_type(self) -> Type[TCommand]:
         """Get the command type this handler processes."""
         # This would be implemented by concrete handlers
         raise NotImplementedError
-    
+
     def supports_command(self, command: ICommand) -> bool:
         """Check if this handler supports the given command."""
         return isinstance(command, self.get_command_type())
@@ -287,31 +284,30 @@ class ICommandHandler(ABC, Generic[TCommand, TResult]):
 class IQueryHandler(ABC, Generic[TQuery, TResult]):
     """
     Base interface for query handlers.
-    
+
     Query handlers contain the logic for retrieving and projecting data
     and should focus on read performance and data presentation.
     """
-    
+
     @abstractmethod
     async def handle(self, query: TQuery) -> QueryResult[TResult]:
         """
         Execute the query and return the result.
-        
+
         Args:
             query: The query to execute
-            
+
         Returns:
             QueryResult containing the query result
-            
+
         Raises:
             Should not raise exceptions - wrap in QueryResult instead
         """
-        pass
-    
+
     def get_query_type(self) -> Type[TQuery]:
         """Get the query type this handler processes."""
         raise NotImplementedError
-    
+
     def supports_query(self, query: IQuery) -> bool:
         """Check if this handler supports the given query."""
         return isinstance(query, self.get_query_type())
@@ -321,20 +317,19 @@ class ICommandBus(ABC):
     """
     Interface for command bus - dispatches commands to appropriate handlers.
     """
-    
+
     @abstractmethod
     async def execute(self, command: ICommand) -> CommandResult[Any]:
         """
         Execute a command through the appropriate handler.
-        
+
         Args:
             command: The command to execute
-            
+
         Returns:
             CommandResult from the handler
         """
-        pass
-    
+
     @abstractmethod
     def register_handler(
         self,
@@ -342,27 +337,25 @@ class ICommandBus(ABC):
         handler: ICommandHandler[Any, Any]
     ) -> None:
         """Register a command handler for a specific command type."""
-        pass
 
 
 class IQueryBus(ABC):
     """
     Interface for query bus - dispatches queries to appropriate handlers.
     """
-    
+
     @abstractmethod
     async def execute(self, query: IQuery) -> QueryResult[Any]:
         """
         Execute a query through the appropriate handler.
-        
+
         Args:
             query: The query to execute
-            
+
         Returns:
             QueryResult from the handler
         """
-        pass
-    
+
     @abstractmethod
     def register_handler(
         self,
@@ -370,7 +363,6 @@ class IQueryBus(ABC):
         handler: IQueryHandler[Any, Any]
     ) -> None:
         """Register a query handler for a specific query type."""
-        pass
 
 
 # Common result types for convenience

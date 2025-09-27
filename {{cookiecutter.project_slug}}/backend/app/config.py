@@ -9,8 +9,11 @@ import os
 from functools import lru_cache
 from typing import Optional
 
+from app.core.config.environments import (
+    create_environment_config,
+    get_environment_settings,
+)
 from app.core.config.settings import Settings as BaseSettings
-from app.core.config.environments import get_environment_settings, create_environment_config
 from app.core.config.validation import setup_config_validation
 from app.utils.logging import get_logger
 
@@ -24,45 +27,45 @@ Settings = BaseSettings
 def get_settings(environment: Optional[str] = None, validate: bool = True) -> Settings:
     """
     Get cached application settings for the specified environment.
-    
+
     Args:
         environment: Environment name (development, testing, staging, production)
         validate: Whether to run configuration validation
-        
+
     Returns:
         Configured Settings instance
     """
     if environment is None:
         environment = os.getenv("ENVIRONMENT", "development")
-    
+
     logger.info(f"Loading configuration for environment: {environment}")
-    
+
     try:
         # Get environment-specific settings class
         settings_class = get_environment_settings(environment)
-        
+
         # Create settings instance
         settings = settings_class()
-        
+
         # Run validation if requested
         if validate:
             try:
                 validation_report = setup_config_validation(settings)
-                
+
                 # Log validation summary
                 if validation_report.get("errors"):
                     logger.warning(f"Configuration has {len(validation_report['errors'])} errors")
                 if validation_report.get("warnings"):
                     logger.info(f"Configuration has {len(validation_report['warnings'])} warnings")
-                
+
             except Exception as e:
                 logger.error(f"Configuration validation failed: {e}")
                 if environment == "production":
                     raise
-                
+
         logger.info(f"Configuration loaded successfully for {environment}")
         return settings
-        
+
     except Exception as e:
         logger.error(f"Failed to load configuration: {e}")
         # Fallback to development settings if possible

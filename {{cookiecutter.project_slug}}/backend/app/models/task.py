@@ -2,16 +2,17 @@
 Task-related Pydantic models for API serialization (Celery background tasks).
 """
 
-from typing import Optional, Dict, Any, List, Union
 from datetime import datetime
-from pydantic import BaseModel, Field
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class TaskStatus(str, Enum):
     """Task status enumeration."""
     PENDING = "pending"
-    RUNNING = "running" 
+    RUNNING = "running"
     SUCCESS = "success"
     FAILURE = "failure"
     RETRY = "retry"
@@ -37,7 +38,7 @@ class TaskSubmissionRequest(BaseModel):
     countdown: Optional[int] = Field(None, description="Delay in seconds before execution")
     expires: Optional[datetime] = Field(None, description="Task expiration time")
     retry_policy: Optional[Dict[str, Any]] = Field(None, description="Custom retry policy")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -61,7 +62,7 @@ class TaskSubmissionRequest(BaseModel):
 class TaskCancelRequest(BaseModel):
     """Task cancellation request model."""
     terminate: bool = Field(False, description="Whether to terminate the task immediately")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -89,7 +90,7 @@ class TaskInfo(BaseModel):
     retry_count: int = Field(0, description="Number of retry attempts")
     max_retries: int = Field(3, description="Maximum retry attempts")
     estimated_completion: Optional[datetime] = Field(None, description="Estimated completion time")
-    
+
     class Config:
         from_attributes = True  # For SQLAlchemy model conversion
         json_schema_extra = {
@@ -128,7 +129,7 @@ class TaskSubmissionResponse(BaseModel):
     created_at: datetime = Field(..., description="Task creation timestamp")
     estimated_completion: Optional[datetime] = Field(None, description="Estimated completion time")
     status_url: str = Field(..., description="URL to check task status")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -149,7 +150,7 @@ class TaskProgressUpdate(BaseModel):
     status_message: Optional[str] = Field(None, description="Human-readable status message")
     intermediate_result: Optional[Any] = Field(None, description="Intermediate result data")
     estimated_completion: Optional[datetime] = Field(None, description="Updated completion estimate")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -174,7 +175,7 @@ class TaskStatistics(BaseModel):
     average_execution_time: float = Field(0.0, description="Average execution time in seconds")
     tasks_per_hour: float = Field(0.0, description="Tasks processed per hour")
     success_rate: float = Field(0.0, description="Success rate percentage")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -203,7 +204,7 @@ class TaskListItem(BaseModel):
     priority: TaskPriority = Field(TaskPriority.NORMAL, description="Task priority")
     retry_count: int = Field(0, description="Number of retry attempts")
     execution_time: Optional[float] = Field(None, description="Execution time in seconds")
-    
+
     class Config:
         from_attributes = True
         json_schema_extra = {
@@ -230,7 +231,7 @@ class TaskListResponse(BaseModel):
     offset: int = Field(..., description="Items skipped")
     has_more: bool = Field(..., description="Whether there are more items")
     statistics: Optional[TaskStatistics] = Field(None, description="Task statistics")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -271,7 +272,7 @@ class QueueInfo(BaseModel):
     pending_tasks: int = Field(0, description="Number of pending tasks in queue")
     active_tasks: int = Field(0, description="Number of active tasks in queue")
     workers: int = Field(0, description="Number of workers processing this queue")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -291,7 +292,7 @@ class WorkerInfo(BaseModel):
     processed_tasks: int = Field(0, description="Total processed tasks")
     queues: List[str] = Field(..., description="Queues this worker processes")
     last_heartbeat: Optional[datetime] = Field(None, description="Last heartbeat timestamp")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -311,7 +312,7 @@ class TaskSystemStatus(BaseModel):
     workers: List[WorkerInfo] = Field(..., description="Worker information")
     statistics: TaskStatistics = Field(..., description="Overall task statistics")
     system_health: str = Field(..., description="Overall system health status")
-    
+
     class Config:
         json_schema_extra = {
             "example": {

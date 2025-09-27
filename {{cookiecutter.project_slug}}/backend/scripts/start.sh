@@ -17,10 +17,10 @@ ENVIRONMENT=${1:-development}
 case $ENVIRONMENT in
     "development" | "dev")
         echo "🔧 Starting development environment..."
-        
+
         # Build and start development services
         docker-compose -f docker/docker-compose.dev.yml up --build -d
-        
+
         echo "✅ Development services started!"
         echo ""
         echo "📍 Available services:"
@@ -45,23 +45,23 @@ case $ENVIRONMENT in
         echo ""
         echo "🔍 View logs: docker-compose -f docker/docker-compose.dev.yml logs -f backend-dev"
         ;;
-        
+
     "production" | "prod")
         echo "🏭 Starting production environment..."
-        
+
         # Check for required environment variables
         if [ -z "$OPENAI_API_KEY" ] && [ -z "$ANTHROPIC_API_KEY" ]; then
             echo "⚠️  Warning: No LLM API keys found in environment variables."
             echo "   Set OPENAI_API_KEY or ANTHROPIC_API_KEY before running in production."
         fi
-        
+
         if [ "$SECRET_KEY" = "your-secret-key-change-in-production" ]; then
             echo "⚠️  Warning: Using default SECRET_KEY. Change it in production!"
         fi
-        
+
         # Build and start production services
         docker-compose -f docker/docker-compose.yml up --build -d
-        
+
         echo "✅ Production services started!"
         echo ""
         echo "📍 Available services:"
@@ -76,7 +76,7 @@ case $ENVIRONMENT in
         echo ""
         echo "🔍 View logs: docker-compose -f docker/docker-compose.yml logs -f backend"
         ;;
-        
+
     *)
         echo "❌ Invalid environment: $ENVIRONMENT"
         echo "Usage: $0 [development|production]"

@@ -2,20 +2,20 @@
 Authentication endpoints with Clerk integration for {{cookiecutter.project_name}}.
 """
 
-from typing import Dict, Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, EmailStr, Field
+from typing import Any, Dict, Optional
 
-from app.core.security.clerk_auth import (
-    ClerkUser, 
-    get_current_user, 
-    require_current_user,
-    get_clerk_provider,
-    ClerkAuthProvider
-)
 from app.api.response_wrapper import APIResponseWrapper
 from app.config import Settings, get_settings
+from app.core.security.clerk_auth import (
+    ClerkAuthProvider,
+    ClerkUser,
+    get_clerk_provider,
+    get_current_user,
+    require_current_user,
+)
 from app.utils.logging import get_logger
+from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel, Field
 
 logger = get_logger("auth_api")
 
@@ -34,7 +34,7 @@ class UserProfileResponse(BaseModel):
     created_at: Optional[str] = Field(None, description="Account creation timestamp")
     updated_at: Optional[str] = Field(None, description="Last update timestamp")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="User metadata")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -56,7 +56,7 @@ class AuthStatusResponse(BaseModel):
     """Authentication status response."""
     authenticated: bool = Field(..., description="Whether user is authenticated")
     user: Optional[UserProfileResponse] = Field(None, description="User profile if authenticated")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -79,7 +79,7 @@ class ClerkConfigResponse(BaseModel):
     sign_up_url: str = Field(..., description="Sign up URL")
     after_sign_in_url: str = Field(..., description="Redirect URL after sign in")
     after_sign_up_url: str = Field(..., description="Redirect URL after sign up")
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -99,12 +99,12 @@ async def get_current_user_profile(
 ) -> UserProfileResponse:
     """
     Get the current authenticated user's profile.
-    
+
     Requires valid JWT token in Authorization header.
     """
     try:
         user_data = current_user.to_dict()
-        
+
         return UserProfileResponse(
             id=user_data["id"],
             email=user_data["email"],
@@ -117,7 +117,7 @@ async def get_current_user_profile(
             updated_at=user_data["updated_at"],
             metadata=user_data["metadata"]
         )
-    
+
     except Exception as e:
         logger.error(f"Error getting user profile: {e}")
         return APIResponseWrapper.server_error(
@@ -132,7 +132,7 @@ async def get_auth_status(
 ) -> AuthStatusResponse:
     """
     Get the current authentication status.
-    
+
     This endpoint doesn't require authentication and will return
     user information if a valid token is provided.
     """
@@ -150,12 +150,12 @@ async def get_auth_status(
             updated_at=user_data["updated_at"],
             metadata=user_data["metadata"]
         )
-        
+
         return AuthStatusResponse(
             authenticated=True,
             user=user_profile
         )
-    
+
     return AuthStatusResponse(
         authenticated=False,
         user=None
@@ -168,14 +168,14 @@ async def get_clerk_config(
 ) -> ClerkConfigResponse:
     """
     Get Clerk configuration for frontend integration.
-    
+
     Returns the publishable key and URL configuration needed
     for Clerk components in the frontend.
     """
     return ClerkConfigResponse(
         publishable_key=settings.clerk_publishable_key,
         sign_in_url="/sign-in",
-        sign_up_url="/sign-up", 
+        sign_up_url="/sign-up",
         after_sign_in_url="/chat",
         after_sign_up_url="/chat"
     )
@@ -190,7 +190,7 @@ async def get_user_by_id(
 ) -> UserProfileResponse:
     """
     Get user profile by ID.
-    
+
     Requires authentication. Users can only access their own profile
     unless they have admin privileges.
     """
@@ -201,19 +201,19 @@ async def get_user_by_id(
             message="Access denied: You can only access your own profile",
             request=request
         )
-    
+
     try:
         user = await clerk_provider.get_user_by_id(user_id)
-        
+
         if not user:
             return APIResponseWrapper.not_found(
                 resource="User",
                 identifier=user_id,
                 request=request
             )
-        
+
         user_data = user.to_dict()
-        
+
         return UserProfileResponse(
             id=user_data["id"],
             email=user_data["email"],
@@ -226,7 +226,7 @@ async def get_user_by_id(
             updated_at=user_data["updated_at"],
             metadata=user_data["metadata"]
         )
-    
+
     except Exception as e:
         logger.error(f"Error getting user by ID {user_id}: {e}")
         return APIResponseWrapper.server_error(
@@ -242,7 +242,7 @@ async def validate_token(
 ) -> Dict[str, Any]:
     """
     Validate JWT token and return user information.
-    
+
     This endpoint can be used to verify if a token is still valid
     and get basic user information.
     """
@@ -265,7 +265,7 @@ async def check_clerk_configuration(
 ) -> Dict[str, Any]:
     """
     Check Clerk configuration status.
-    
+
     Used for debugging and ensuring Clerk is properly configured.
     """
     config_status = {
@@ -275,7 +275,7 @@ async def check_clerk_configuration(
         "publishable_key_format": settings.clerk_publishable_key.startswith("pk_") if settings.clerk_publishable_key else False,
         "secret_key_format": settings.clerk_secret_key.startswith("sk_") if settings.clerk_secret_key else False
     }
-    
+
     # Test JWKS endpoint connectivity
     try:
         from app.core.security.clerk_auth import validate_clerk_config
@@ -285,7 +285,7 @@ async def check_clerk_configuration(
         logger.error(f"JWKS check failed: {e}")
         config_status["jwks_accessible"] = False
         config_status["jwks_error"] = str(e)
-    
+
     return APIResponseWrapper.success(
         message="Clerk configuration status",
         data=config_status,
@@ -324,19 +324,19 @@ async def auth_health_check(
     try:
         from app.core.security.clerk_auth import validate_clerk_config
         clerk_healthy = await validate_clerk_config(settings)
-        
+
         health_data = {
             "clerk_configured": bool(settings.clerk_publishable_key and settings.clerk_secret_key),
             "clerk_accessible": clerk_healthy,
             "status": "healthy" if clerk_healthy else "degraded"
         }
-        
+
         return APIResponseWrapper.success(
             message="Authentication health check completed",
             data=health_data,
             request=request
         )
-        
+
     except Exception as e:
         logger.error(f"Auth health check failed: {e}")
         return APIResponseWrapper.server_error(

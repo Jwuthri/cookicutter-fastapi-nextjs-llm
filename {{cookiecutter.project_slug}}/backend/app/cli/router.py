@@ -2,21 +2,12 @@
 CLI command router for {{cookiecutter.project_name}}.
 """
 
-from .commands import (
-    database,
-    health,
-    server,
-    setup,
-    llm,
-    cache,
-    logs,
-    worker
-)
+from .commands import cache, database, health, llm, logs, server, setup, worker
 
 
 def setup_commands(cli):
     """Register all CLI commands with the main CLI group."""
-    
+
     # Add command groups
     cli.add_command(server.server)
     cli.add_command(database.database)

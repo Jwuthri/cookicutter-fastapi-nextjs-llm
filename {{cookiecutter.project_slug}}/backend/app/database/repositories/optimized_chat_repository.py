@@ -4,22 +4,21 @@ Optimized chat repository with N+1 query prevention and performance improvements
 This module demonstrates best practices for database query optimization:
 - Eager loading with selectinload/joinedload
 - Query batching
-- Efficient pagination  
+- Efficient pagination
 - Proper indexing usage
 - Query result caching
 """
 
 import time
-from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, timedelta
-from sqlalchemy import desc, asc, func, and_, or_, text
-from sqlalchemy.orm import Session, selectinload, joinedload, contains_eager
-from sqlalchemy.dialects.postgresql import aggregate_order_by
+from typing import Any, Dict, List, Optional, Tuple
 
-from app.database.models.chat_session import ChatSession
 from app.database.models.chat_message import ChatMessage, MessageRoleEnum
+from app.database.models.chat_session import ChatSession
 from app.database.models.user import User
 from app.utils.logging import get_logger
+from sqlalchemy import and_, desc, func, text
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 logger = get_logger("optimized_chat_repository")
 
@@ -27,14 +26,14 @@ logger = get_logger("optimized_chat_repository")
 class OptimizedChatRepository:
     """
     Optimized repository for chat operations with N+1 prevention.
-    
+
     This repository demonstrates proper query optimization techniques:
     - Eager loading to prevent N+1 queries
     - Efficient joins and subqueries
     - Batched operations
     - Smart pagination
     """
-    
+
     @staticmethod
     def get_sessions_with_messages_optimized(
         db: Session,
@@ -46,12 +45,12 @@ class OptimizedChatRepository:
     ) -> List[ChatSession]:
         """
         Get user sessions with optimized loading to prevent N+1 queries.
-        
+
         ❌ OLD WAY (N+1 Problem):
         sessions = db.query(ChatSession).filter_by(user_id=user_id).all()
         for session in sessions:  # N+1: One query per session!
             messages = db.query(ChatMessage).filter_by(session_id=session.id).all()
-        
+
         ✅ NEW WAY (Optimized):
         Single query with eager loading and aggregates
         """
@@ -60,10 +59,10 @@ class OptimizedChatRepository:
             .filter(ChatSession.user_id == user_id)
             .filter(ChatSession.is_active == True)
         )
-        
+
         # Eager load user to prevent additional query
         query = query.options(joinedload(ChatSession.user))
-        
+
         if include_last_message or include_message_count:
             # Create a subquery for message statistics
             message_stats = (
@@ -81,11 +80,11 @@ class OptimizedChatRepository:
                 .group_by(ChatMessage.session_id)
                 .subquery()
             )
-            
+
             # Join with message statistics
             query = (
                 query.outerjoin(
-                    message_stats, 
+                    message_stats,
                     ChatSession.id == message_stats.c.session_id
                 )
                 .add_columns(
@@ -94,16 +93,16 @@ class OptimizedChatRepository:
                     message_stats.c.last_message_content
                 )
             )
-        
+
         # Order by last activity for better UX
         query = query.order_by(
             desc(ChatSession.updated_at),
             desc(ChatSession.created_at)
         )
-        
+
         # Efficient pagination
         results = query.offset(offset).limit(limit).all()
-        
+
         if include_message_count or include_last_message:
             # Enhance session objects with computed fields
             sessions = []
@@ -120,7 +119,7 @@ class OptimizedChatRepository:
             return sessions
         else:
             return results
-    
+
     @staticmethod
     def get_conversation_with_context_optimized(
         db: Session,
@@ -130,12 +129,12 @@ class OptimizedChatRepository:
     ) -> Optional[Tuple[ChatSession, List[ChatMessage]]]:
         """
         Get session with message context in a single optimized query.
-        
+
         ❌ OLD WAY:
         session = db.query(ChatSession).filter_by(id=session_id).first()
         messages = db.query(ChatMessage).filter_by(session_id=session_id).all()
         user = db.query(User).filter_by(id=session.user_id).first()  # N+1!
-        
+
         ✅ NEW WAY:
         Single query with eager loading
         """
@@ -152,29 +151,29 @@ class OptimizedChatRepository:
                 )
             )
         )
-        
+
         if include_user:
             # Eager load user (joinedload for single relationships)
             query = query.options(joinedload(ChatSession.user))
-        
+
         session = query.first()
-        
+
         if not session:
             return None
-        
+
         # Sort messages by creation time (already loaded, no extra query)
         messages = sorted(
-            session.messages, 
+            session.messages,
             key=lambda m: m.created_at,
             reverse=False  # Chronological order for context
         )
-        
+
         # Limit context messages if needed
         if len(messages) > context_limit:
             messages = messages[-context_limit:]  # Keep most recent
-        
+
         return session, messages
-    
+
     @staticmethod
     def bulk_update_session_activity(
         db: Session,
@@ -183,22 +182,22 @@ class OptimizedChatRepository:
     ) -> int:
         """
         Efficiently update multiple sessions in a single query.
-        
+
         ❌ OLD WAY:
         for session_id in session_ids:
             session = db.query(ChatSession).filter_by(id=session_id).first()
             session.updated_at = datetime.utcnow()
             db.commit()  # N commits!
-        
+
         ✅ NEW WAY:
         Single bulk update query
         """
         if not session_ids:
             return 0
-        
+
         if last_activity is None:
             last_activity = datetime.utcnow()
-        
+
         updated_count = (
             db.query(ChatSession)
             .filter(ChatSession.id.in_(session_ids))
@@ -210,9 +209,9 @@ class OptimizedChatRepository:
                 synchronize_session=False  # Faster for bulk updates
             )
         )
-        
+
         return updated_count
-    
+
     @staticmethod
     def get_user_chat_statistics_optimized(
         db: Session,
@@ -221,12 +220,12 @@ class OptimizedChatRepository:
     ) -> Dict[str, Any]:
         """
         Get comprehensive user chat statistics in efficient queries.
-        
+
         ❌ OLD WAY: Multiple separate queries
         ✅ NEW WAY: Optimized aggregation queries
         """
         cutoff_date = datetime.utcnow() - timedelta(days=days)
-        
+
         # Single query for session statistics
         session_stats = (
             db.query(
@@ -243,8 +242,8 @@ class OptimizedChatRepository:
             .filter(ChatSession.created_at >= cutoff_date)
             .first()
         )
-        
-        # Single query for message statistics  
+
+        # Single query for message statistics
         message_stats = (
             db.query(
                 func.count(ChatMessage.id).label('total_messages'),
@@ -259,7 +258,7 @@ class OptimizedChatRepository:
             .filter(ChatMessage.created_at >= cutoff_date)
             .first()
         )
-        
+
         return {
             'user_id': user_id,
             'period_days': days,
@@ -278,7 +277,7 @@ class OptimizedChatRepository:
                 'per_day': float(message_stats.messages_per_day or 0)
             }
         }
-    
+
     @staticmethod
     def search_messages_with_session_context(
         db: Session,
@@ -289,7 +288,7 @@ class OptimizedChatRepository:
     ) -> List[Dict[str, Any]]:
         """
         Search messages and include session context efficiently.
-        
+
         ❌ OLD WAY: Query messages, then query each session separately
         ✅ NEW WAY: Single query with joins
         """
@@ -311,10 +310,10 @@ class OptimizedChatRepository:
                 ChatMessage.content.ilike(f'%{search_term}%')
             )
         )
-        
+
         if user_id:
             query = query.filter(ChatSession.user_id == user_id)
-        
+
         # Order by relevance and recency
         results = (
             query.order_by(
@@ -325,7 +324,7 @@ class OptimizedChatRepository:
             .limit(limit)
             .all()
         )
-        
+
         return [
             {
                 'message': {
@@ -346,7 +345,7 @@ class OptimizedChatRepository:
             }
             for row in results
         ]
-    
+
     @staticmethod
     def get_message_thread_optimized(
         db: Session,
@@ -356,7 +355,7 @@ class OptimizedChatRepository:
     ) -> Dict[str, Any]:
         """
         Get a message with surrounding context efficiently.
-        
+
         Uses window functions to get context in a single query.
         """
         # First, get the target message to find its position
@@ -375,10 +374,10 @@ class OptimizedChatRepository:
             .filter(ChatMessage.id == message_id)
             .first()
         )
-        
+
         if not target_message:
             return None
-        
+
         # Get context messages using the position
         context_query = (
             db.query(
@@ -393,24 +392,24 @@ class OptimizedChatRepository:
             .filter(
                 and_(
                     # Position range for context
-                    text('row_number() OVER (PARTITION BY session_id ORDER BY created_at)') >= 
+                    text('row_number() OVER (PARTITION BY session_id ORDER BY created_at)') >=
                     target_message.position - context_before,
-                    text('row_number() OVER (PARTITION BY session_id ORDER BY created_at)') <= 
+                    text('row_number() OVER (PARTITION BY session_id ORDER BY created_at)') <=
                     target_message.position + context_after
                 )
             )
             .order_by(ChatMessage.created_at)
             .all()
         )
-        
+
         messages = []
         target_index = -1
-        
+
         for i, (message, position) in enumerate(context_query):
             is_target = message.id == message_id
             if is_target:
                 target_index = i
-            
+
             messages.append({
                 'id': message.id,
                 'content': message.content,
@@ -419,7 +418,7 @@ class OptimizedChatRepository:
                 'is_target': is_target,
                 'position_in_session': position
             })
-        
+
         return {
             'target_message_index': target_index,
             'messages': messages,
@@ -436,7 +435,7 @@ def monitor_query_performance(operation_name: str):
             try:
                 result = await func(*args, **kwargs)
                 duration = time.time() - start_time
-                
+
                 if duration > 1.0:  # Log slow queries
                     logger.warning(
                         f"Slow query detected: {operation_name} took {duration:.2f}s"
@@ -445,7 +444,7 @@ def monitor_query_performance(operation_name: str):
                     logger.info(
                         f"Query performance: {operation_name} took {duration:.3f}s"
                     )
-                
+
                 return result
             except Exception as e:
                 duration = time.time() - start_time
@@ -453,7 +452,7 @@ def monitor_query_performance(operation_name: str):
                     f"Query failed: {operation_name} failed after {duration:.3f}s: {e}"
                 )
                 raise
-        
+
         return wrapper
     return decorator
 
@@ -461,13 +460,13 @@ def monitor_query_performance(operation_name: str):
 # Example usage of the optimized repository
 async def example_usage():
     """Example demonstrating optimized query usage."""
-    
+
     # ❌ OLD WAY - N+1 Queries:
     # sessions = db.query(ChatSession).filter_by(user_id='user123').all()
     # for session in sessions:  # This creates N additional queries!
     #     messages = db.query(ChatMessage).filter_by(session_id=session.id).all()
     #     user = db.query(User).filter_by(id=session.user_id).first()
-    
+
     # ✅ NEW WAY - Single Optimized Query:
     # optimized_sessions = OptimizedChatRepository.get_sessions_with_messages_optimized(
     #     db=db,
@@ -476,12 +475,10 @@ async def example_usage():
     #     include_message_count=True,
     #     include_last_message=True
     # )
-    # 
+    #
     # # All data loaded efficiently with eager loading!
     # for session in optimized_sessions:
     #     print(f"Session: {session.title}")
     #     print(f"Messages: {session._message_count}")
     #     print(f"Last message: {session._last_message_content}")
     #     print(f"User: {session.user.username}")  # Already loaded!
-    
-    pass
