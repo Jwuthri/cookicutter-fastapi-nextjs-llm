@@ -4,6 +4,7 @@
     "description": "A FastAPI + Next.js AI agent application with OpenRouter and Agno",
     "author_name": "Your Name",
     "author_email": "your.email@example.com",
+    "github_username": "your-github-username",
     "version": "0.1.0",
     "python_version": "3.11",
     "node_version": "18",
