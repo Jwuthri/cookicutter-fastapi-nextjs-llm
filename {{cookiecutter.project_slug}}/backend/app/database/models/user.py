@@ -40,7 +40,7 @@ class User(Base):
 
     # User preferences and metadata
     preferences = Column(JSON, default={})
-    metadata = Column(JSON, default={})
+    extra_metadata = Column(JSON, default={})
 
     # API usage tracking
     total_requests = Column(Integer, default=0)

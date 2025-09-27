@@ -48,7 +48,7 @@ class ApiKey(Base):
     expires_at = Column(DateTime, nullable=True)
 
     # Metadata
-    metadata = Column(JSON, default={})
+    extra_metadata = Column(JSON, default={})
 
     # Relationships
     user = relationship("User")
