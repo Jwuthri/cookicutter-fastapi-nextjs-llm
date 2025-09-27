@@ -374,29 +374,12 @@ npm run test:e2e
 ```bash
 # Run unit tests
 npm run test
-
-# Component testing example
-import { render, screen } from '@testing-library/react'
-import { MessageItem } from '@/components/chat/message-item'
-
-test('renders user message correctly', () => {
-  render(<MessageItem message={{ role: 'user', content: 'Hello' }} />)
-  expect(screen.getByText('Hello')).toBeInTheDocument()
-})
 ```
 
 **End-to-End Testing** (Playwright):
 ```bash
 # Run E2E tests
 npm run test:e2e
-
-# Test example
-test('user can send a message', async ({ page }) => {
-  await page.goto('/')
-  await page.fill('[data-testid=message-input]', 'Hello')
-  await page.click('[data-testid=send-button]')
-  await expect(page.locator('[data-testid=message]')).toContainText('Hello')
-})
 ```
 
 ## 🐳 Docker Support
