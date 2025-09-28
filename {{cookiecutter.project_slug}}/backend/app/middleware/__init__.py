@@ -8,8 +8,12 @@ from .tracing_middleware import (
     TracingMiddleware,
 )
 
+# Import setup_middleware from the parent middleware module
+from ..middleware import setup_middleware
+
 __all__ = [
     "TracingMiddleware",
     "DatabaseTracingMixin",
     "ExternalServiceTracingMixin",
+    "setup_middleware",
 ]
