@@ -29,8 +29,8 @@ check_container() {
 
     echo -n "🐳 $display_name: "
 
-    if docker ps --format "table {{.Names}}" | grep -q "$container_name"; then
-        status=$(docker inspect --format='{{.State.Status}}' "$container_name" 2>/dev/null || echo "not found")
+    if docker ps --format "table {{ '{{.Names}}' }}" | grep -q "$container_name"; then
+        status=$(docker inspect --format='{{ '{{.State.Status}}' }}' "$container_name" 2>/dev/null || echo "not found")
         if [ "$status" = "running" ]; then
             echo "✅ Running"
         else
@@ -46,7 +46,7 @@ echo "🐳 Docker Containers:"
 echo "--------------------"
 
 # Check development containers
-if docker ps -a --format "table {{.Names}}" | grep -q "{{cookiecutter.project_slug}}.*_dev"; then
+if docker ps -a --format "table {{ '{{.Names}}' }}" | grep -q "{{cookiecutter.project_slug}}.*_dev"; then
     echo "Development Environment:"
     check_container "{{cookiecutter.project_slug}}_backend_dev" "Backend (Dev)"
     {% if cookiecutter.include_database == "postgresql" %}
@@ -60,7 +60,7 @@ if docker ps -a --format "table {{.Names}}" | grep -q "{{cookiecutter.project_sl
 fi
 
 # Check production containers
-if docker ps -a --format "table {{.Names}}" | grep -q "{{cookiecutter.project_slug}}_.*" | grep -v "_dev"; then
+if docker ps -a --format "table {{ '{{.Names}}' }}" | grep -q "{{cookiecutter.project_slug}}_.*" | grep -v "_dev"; then
     echo "Production Environment:"
     check_container "{{cookiecutter.project_slug}}_backend" "Backend (Prod)"
     {% if cookiecutter.include_database == "postgresql" %}
@@ -122,9 +122,9 @@ echo "📈 Resource Usage:"
 echo "-----------------"
 
 # Show Docker stats for running containers
-if docker ps --format "table {{.Names}}" | grep -q "{{cookiecutter.project_slug}}"; then
+if docker ps --format "table {{ '{{.Names}}' }}" | grep -q "{{cookiecutter.project_slug}}"; then
     echo "Docker Container Stats:"
-    docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}" $(docker ps --filter "name={{cookiecutter.project_slug}}" --format "{{.Names}}" | tr '\n' ' ') 2>/dev/null || true
+    docker stats --no-stream --format "table {{ '{{.Name}}' }}\t{{ '{{.CPUPerc}}' }}\t{{ '{{.MemUsage}}' }}" $(docker ps --filter "name={{cookiecutter.project_slug}}" --format "{{ '{{.Names}}' }}" | tr '\n' ' ') 2>/dev/null || true
 else
     echo "No {{cookiecutter.project_name}} containers running."
 fi
@@ -141,11 +141,11 @@ echo "🗄️ pgAdmin: http://localhost:5050 (admin@{{cookiecutter.project_slug}
 echo "🐰 RabbitMQ Management: http://localhost:15672 (guest/guest)"
 
 # Show optional UIs if they're running
-if docker ps --format "table {{.Names}}" | grep -q "kafka_ui"; then
+if docker ps --format "table {{ '{{.Names}}' }}" | grep -q "kafka_ui"; then
     echo "📊 Kafka UI: http://localhost:8080"
 fi
 
-if docker ps --format "table {{.Names}}" | grep -q "redis_commander"; then
+if docker ps --format "table {{ '{{.Names}}' }}" | grep -q "redis_commander"; then
     echo "📊 Redis Commander: http://localhost:8081"
 fi
 
