@@ -116,7 +116,7 @@ if ! kill -0 $LLM_PID 2>/dev/null; then
     failed_workers+=("llm")
 fi
 
-if [ ${#failed_workers[@]} -gt 0 ]; then
+if [ ${{ '{#' }}failed_workers[@]} -gt 0 ]; then
     echo -e "${RED}Failed to start workers: ${failed_workers[*]}${NC}"
     echo -e "${YELLOW}Check log files in logs/ directory${NC}"
     exit 1
