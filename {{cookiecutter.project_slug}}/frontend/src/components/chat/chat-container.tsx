@@ -55,7 +55,7 @@ export function ChatContainer() {
       <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800/50">
         <div className="flex items-center space-x-4">
           <Link href="/" className="text-white font-bold tracking-wider hover:text-purple-400 transition-colors">
-            {{cookiecutter.project_name}}
+            AI Agent App
           </Link>
           <div className="flex items-center space-x-2 text-sm text-white/60">
             <Terminal className="w-4 h-4" />

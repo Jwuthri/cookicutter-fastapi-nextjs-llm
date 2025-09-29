@@ -14,8 +14,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "{{cookiecutter.project_name}}",
-  description: "{{cookiecutter.description}}",
+  title: "AI Agent App",
+  description: "A FastAPI + Next.js AI agent application",
 };
 
 export default function RootLayout({

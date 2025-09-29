@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:{{cookiecutter.backend_port}}'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 export interface ChatRequest {
   message: string
@@ -141,7 +141,6 @@ export const createApiClient = (token?: string | null): ApiClient => {
 }
 
 // WebSocket client for real-time communication
-{% if cookiecutter.use_websockets == "yes" %}
 export class WebSocketClient {
   private ws: WebSocket | null = null
   private baseUrl: string
@@ -149,7 +148,7 @@ export class WebSocketClient {
   private messageHandlers: Array<(data: any) => void> = []
   private connectionHandlers: Array<(connected: boolean) => void> = []
 
-  constructor(sessionId: string, baseUrl: string = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:{{cookiecutter.backend_port}}') {
+  constructor(sessionId: string, baseUrl: string = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000') {
     this.baseUrl = baseUrl.replace(/\/$/, '')
     this.sessionId = sessionId
   }
@@ -232,4 +231,3 @@ export class WebSocketClient {
     return this.ws?.readyState === WebSocket.OPEN
   }
 }
-{% endif %}

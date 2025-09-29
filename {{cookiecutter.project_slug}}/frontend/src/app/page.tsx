@@ -15,7 +15,7 @@ export default function HomePage() {
       {/* Navigation */}
       <nav className="flex items-center justify-between px-6 py-4">
         <div className="text-white font-bold tracking-wider">
-          {{cookiecutter.project_name}}
+          AI Agent App
         </div>
         <div>
           {isSignedIn ? (
@@ -162,7 +162,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="text-center py-8 text-white/40 text-sm">
-        © 2025 {{cookiecutter.project_name}}. All rights reserved.
+        © 2025 Ai Agent App. All rights reserved.
       </footer>
     </div>
   )
