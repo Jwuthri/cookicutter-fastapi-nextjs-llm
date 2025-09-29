@@ -8,9 +8,22 @@ import secrets
 from enum import Enum
 from functools import lru_cache
 from typing import Dict, List, Optional
+from pathlib import Path
 
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    # Try to load .env from current directory or parent directory
+    env_paths = [Path('.env'), Path('../.env'), Path('backend/.env')]
+    for env_path in env_paths:
+        if env_path.exists():
+            load_dotenv(env_path)
+            break
+except ImportError:
+    pass  # python-dotenv not installed
 
 
 class Environment(str, Enum):
@@ -415,7 +428,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         case_sensitive=False,
         env_ignore_empty=True,
-        extra='ignore'
+        extra='ignore',
+        env_file=('.env', '../.env'),  # Try both current dir and parent dir
+        env_file_encoding='utf-8'
     )
 
 

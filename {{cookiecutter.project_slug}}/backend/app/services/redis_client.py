@@ -22,6 +22,14 @@ class RedisClient:
         self.redis: Optional[AsyncRedis] = None
         self.sync_redis: Optional[Redis] = None
         self._initialized = False
+        self._available = False  # Track if Redis is actually available
+
+    def _check_availability(self, operation: str) -> bool:
+        """Check if Redis is available for the given operation."""
+        if not self._available:
+            logger.debug(f"Redis not available, skipping {operation}")
+            return False
+        return True
 
     async def initialize(self):
         """Initialize the Redis client (called by DI container)."""
@@ -54,10 +62,14 @@ class RedisClient:
                 encoding="utf-8",
                 decode_responses=True
             )
+            
+            self._available = True
 
         except Exception as e:
-            logger.error(f"Failed to connect to Redis: {e}")
-            raise
+            logger.warning(f"Redis not available at {self.redis_url}: {e}")
+            logger.info("Running without Redis - caching and session features will be disabled")
+            self._available = False
+            # Don't raise the exception - allow the app to continue without Redis
 
     async def disconnect(self):
         """Close Redis connections."""
@@ -69,6 +81,9 @@ class RedisClient:
 
     async def set(self, key: str, value: Any, expire: Optional[int] = None) -> bool:
         """Set a key-value pair with optional expiration."""
+        if not self._check_availability(f"SET {key}"):
+            return False
+            
         try:
             if isinstance(value, (dict, list)):
                 value = json.dumps(value)
@@ -81,6 +96,9 @@ class RedisClient:
 
     async def get(self, key: str) -> Optional[Any]:
         """Get a value by key."""
+        if not self._check_availability(f"GET {key}"):
+            return None
+            
         try:
             value = await self.redis.get(key)
             if value is None:
@@ -97,6 +115,9 @@ class RedisClient:
 
     async def delete(self, key: str) -> bool:
         """Delete a key."""
+        if not self._check_availability(f"DELETE {key}"):
+            return False
+            
         try:
             result = await self.redis.delete(key)
             return result > 0
@@ -106,6 +127,9 @@ class RedisClient:
 
     async def exists(self, key: str) -> bool:
         """Check if a key exists."""
+        if not self._check_availability(f"EXISTS {key}"):
+            return False
+            
         try:
             return bool(await self.redis.exists(key))
         except Exception as e:
@@ -114,6 +138,9 @@ class RedisClient:
 
     async def increment(self, key: str, amount: int = 1) -> Optional[int]:
         """Increment a numeric value."""
+        if not self._check_availability(f"INCR {key}"):
+            return None
+            
         try:
             return await self.redis.incrby(key, amount)
         except Exception as e:
@@ -122,6 +149,9 @@ class RedisClient:
 
     async def set_hash(self, key: str, mapping: Dict[str, Any]) -> bool:
         """Set multiple fields in a hash."""
+        if not self._check_availability(f"HSET {key}"):
+            return False
+            
         try:
             # Convert values to strings, JSON-encode complex types
             processed_mapping = {}
@@ -139,6 +169,9 @@ class RedisClient:
 
     async def get_hash(self, key: str) -> Optional[Dict[str, Any]]:
         """Get all fields from a hash."""
+        if not self._check_availability(f"HGETALL {key}"):
+            return None
+            
         try:
             result = await self.redis.hgetall(key)
             if not result:
@@ -159,6 +192,9 @@ class RedisClient:
 
     async def publish(self, channel: str, message: Any) -> int:
         """Publish a message to a Redis channel."""
+        if not self._check_availability(f"PUBLISH {channel}"):
+            return 0
+            
         try:
             if isinstance(message, (dict, list)):
                 message = json.dumps(message)
@@ -171,6 +207,9 @@ class RedisClient:
 
     async def subscribe(self, channels: list[str]):
         """Subscribe to Redis channels."""
+        if not self._check_availability(f"SUBSCRIBE {channels}"):
+            return None
+            
         try:
             pubsub = self.redis.pubsub()
             await pubsub.subscribe(*channels)
@@ -203,6 +242,9 @@ class RedisClient:
 
     async def health_check(self) -> bool:
         """Check Redis health."""
+        if not self._available:
+            return False
+            
         try:
             await self.redis.ping()
             return True

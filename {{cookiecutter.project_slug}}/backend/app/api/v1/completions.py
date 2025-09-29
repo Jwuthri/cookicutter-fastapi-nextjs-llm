@@ -4,15 +4,17 @@ Completion endpoints for {{cookiecutter.project_name}}.
 
 from typing import Optional
 
-from app.api.deps import check_rate_limit, get_llm_service, get_user_id_from_header
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from app.api.deps import check_rate_limit, get_user_id_from_header
 from app.core.llm.base import BaseLLMClient
+from app.dependencies import get_llm_service
 from app.exceptions import LLMError, ValidationError
 from app.models.completion import (
     CompletionRequest,
     CompletionResponse,
     StreamingCompletionResponse,
 )
-from fastapi import APIRouter, Depends, HTTPException, status
 
 router = APIRouter()
 
