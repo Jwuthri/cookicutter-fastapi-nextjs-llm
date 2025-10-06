@@ -1,15 +1,11 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { SignInButton, UserButton, useUser } from '@clerk/nextjs'
+import React from 'react'
 import { motion } from 'framer-motion'
 import { MessageCircle, Code, Zap } from 'lucide-react'
 import Link from 'next/link'
 
 export default function HomePage() {
-  const { isSignedIn, user } = useUser()
-  const [email, setEmail] = useState('')
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-blue-950 to-purple-950">
       {/* Navigation */}
@@ -17,17 +13,11 @@ export default function HomePage() {
         <div className="text-white font-bold tracking-wider">
           AI Agent App
         </div>
-        <div>
-          {isSignedIn ? (
-            <UserButton afterSignOutUrl="/" />
-          ) : (
-            <SignInButton mode="modal">
-              <button className="text-white/80 hover:text-white transition-colors">
-                Sign In
-              </button>
-            </SignInButton>
-          )}
-        </div>
+        <Link href="/chat">
+          <button className="text-white/80 hover:text-white transition-colors">
+            Go to Chat
+          </button>
+        </Link>
       </nav>
 
       <div className="container mx-auto px-6 py-16">
@@ -75,47 +65,19 @@ export default function HomePage() {
             </div>
           </motion.div>
 
-          {/* Email Signup */}
-          {!isSignedIn && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-              className="mb-16"
-            >
-              <h2 className="text-2xl font-bold text-white mb-4">Get Started</h2>
-              <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-                  className="flex-1 px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                />
-                <SignInButton mode="modal">
-                  <button className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 hover:scale-105">
-                    Start Chatting →
-                  </button>
-                </SignInButton>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Action Button for Signed In Users */}
-          {isSignedIn && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-              className="mb-16"
-            >
-              <Link href="/chat">
-                <button className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 hover:scale-105 text-lg">
-                  Start Chatting →
-                </button>
-              </Link>
-            </motion.div>
-          )}
+          {/* Get Started Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            className="mb-16"
+          >
+            <Link href="/chat">
+              <button className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 hover:scale-105 text-lg">
+                Start Chatting →
+              </button>
+            </Link>
+          </motion.div>
         </div>
 
         {/* Features */}

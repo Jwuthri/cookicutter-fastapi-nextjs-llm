@@ -5,14 +5,12 @@ import { motion } from "framer-motion";
 import { User, Bot, Copy, ThumbsUp, ThumbsDown, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { ChatMessage } from "@/types/chat";
-import { User as ClerkUser } from "@clerk/nextjs/server";
 
 interface MessageItemProps {
   message: ChatMessage;
-  user?: ClerkUser | null;
 }
 
-export function MessageItem({ message, user }: MessageItemProps) {
+export function MessageItem({ message }: MessageItemProps) {
   const [showActions, setShowActions] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -53,15 +51,7 @@ export function MessageItem({ message, user }: MessageItemProps) {
             }`}
           >
             {isUser ? (
-              user?.imageUrl ? (
-                <img
-                  src={user.imageUrl}
-                  alt={user.firstName || "User"}
-                  className="w-10 h-10 rounded-full"
-                />
-              ) : (
-                <User className="w-5 h-5 text-white" />
-              )
+              <User className="w-5 h-5 text-white" />
             ) : (
               <Sparkles className="w-5 h-5 text-white" />
             )}
@@ -74,7 +64,7 @@ export function MessageItem({ message, user }: MessageItemProps) {
             className={`flex items-center space-x-2 mb-2 ${isUser ? "justify-end" : "justify-start"}`}
           >
             <span className="text-sm font-medium text-white">
-              {isUser ? user?.firstName || "You" : "AI Assistant"}
+              {isUser ? "You" : "AI Assistant"}
             </span>
             <span className="text-xs text-white/40">
               {formatTimestamp(message.timestamp)}

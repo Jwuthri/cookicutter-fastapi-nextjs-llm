@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useUser, UserButton } from '@clerk/nextjs'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Send, Sparkles, Terminal, Settings, History } from 'lucide-react'
 import { useChat } from '@/hooks/use-chat'
@@ -9,7 +8,6 @@ import { MessageItem } from './message-item'
 import Link from 'next/link'
 
 export function ChatContainer() {
-  const { user } = useUser()
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -70,7 +68,6 @@ export function ChatContainer() {
           <button className="p-2 text-white/60 hover:text-white transition-colors rounded-lg hover:bg-white/10">
             <Settings className="w-5 h-5" />
           </button>
-          <UserButton afterSignOutUrl="/" />
         </div>
       </header>
 
@@ -89,7 +86,7 @@ export function ChatContainer() {
                   <Sparkles className="w-10 h-10 text-white" />
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-4">
-                  Welcome, {user?.firstName || 'there'}!
+                  Welcome!
                 </h2>
                 <p className="text-white/70 mb-8 max-w-md mx-auto">
                   Start a conversation with AI. Ask questions, get help, or just chat about anything.
@@ -154,7 +151,6 @@ export function ChatContainer() {
                 <MessageItem
                   key={message.id}
                   message={message}
-                  user={user}
                 />
               ))}
             </AnimatePresence>
