@@ -72,7 +72,7 @@ services:
 ## Environment Configuration
 
 ### Environment Files
-- **Template**: [config_template.env](mdc:{{cookiecutter.project_slug}}/backend/.env.template) as reference
+- **Template**: [config_template.env](mdc:{{cookiecutter.project_slug}}/backend/.env.tempalte) as reference
 - **Development**: `.env` files for local development
 - **Production**: Use secrets management (Docker Secrets, Kubernetes Secrets)
 
@@ -368,10 +368,10 @@ jobs:
 
     - name: Build and push images
       run: |
-        docker build -t ${{ secrets.REGISTRY }}/backend ./backend
-        docker build -t ${{ secrets.REGISTRY }}/frontend ./frontend
-        docker push ${{ secrets.REGISTRY }}/backend
-        docker push ${{ secrets.REGISTRY }}/frontend
+        docker build -t REGISTRY/backend ./backend
+        docker build -t REGISTRY/frontend ./frontend
+        docker push REGISTRY/backend
+        docker push REGISTRY/frontend
 
     - name: Deploy to production
       run: |
