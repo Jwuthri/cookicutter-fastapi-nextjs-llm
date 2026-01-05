@@ -2,24 +2,10 @@
 Pydantic models for {{cookiecutter.project_name}}.
 """
 
-from .api_key import *
 from .base import *
-from .chat import *
-from .completion import *
-from .task import *
 from .user import *
 
 __all__ = [
-    # Chat models
-    "ChatMessage",
-    "ChatRequest",
-    "ChatResponse",
-    "ChatSession",
-    "MessageHistory",
-    # Completion models
-    "CompletionRequest",
-    "CompletionResponse",
-    "StreamingCompletionResponse",
     # User models
     "UserProfile",
     "UserPublicProfile",
@@ -30,7 +16,8 @@ __all__ = [
     "LoginResponse",
     "UserStats",
     "UserListResponse",
-    # Note: API Key and advanced Task models available but not currently used in endpoints
+    "UserStatusEnum",
+    "UserListItem",
     # Base models
     "HealthResponse",
     "ErrorResponse",
@@ -38,5 +25,5 @@ __all__ = [
     "SuccessResponse",
     "StatusResponse",
     "APIInfo",
-    "PaginatedResponse"
+    "PaginatedResponse",
 ]

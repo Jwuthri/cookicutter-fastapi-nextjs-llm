@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 from app.api.response_wrapper import APIResponseWrapper
 from app.config import Settings, get_settings
-from app.core.security.clerk_auth import (
+from app.security.clerk_auth import (
     ClerkAuthProvider,
     ClerkUser,
     get_clerk_provider,
@@ -278,7 +278,7 @@ async def check_clerk_configuration(
 
     # Test JWKS endpoint connectivity
     try:
-        from app.core.security.clerk_auth import validate_clerk_config
+        from app.security.clerk_auth import validate_clerk_config
         jwks_accessible = await validate_clerk_config(settings)
         config_status["jwks_accessible"] = jwks_accessible
     except Exception as e:
@@ -322,7 +322,7 @@ async def auth_health_check(
     Health check for authentication system.
     """
     try:
-        from app.core.security.clerk_auth import validate_clerk_config
+        from app.security.clerk_auth import validate_clerk_config
         clerk_healthy = await validate_clerk_config(settings)
 
         health_data = {

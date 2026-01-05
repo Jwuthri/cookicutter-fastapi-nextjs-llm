@@ -21,28 +21,27 @@ logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 Base = declarative_base()
 
 # Legacy sync database support (for backwards compatibility)
-{% if cookiecutter.include_database == "postgresql" %}
-engine = create_engine(
-    settings.database_url,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
-    echo=settings.environment == "development"
-)
-{% elif cookiecutter.include_database == "sqlite" %}
-engine = create_engine(
-    settings.database_url,
-    connect_args={"check_same_thread": False},  # Only for SQLite
-    echo=settings.environment == "development"
-)
-{% else %}
-# No database configured - using in-memory SQLite for testing
-engine = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False},
-    echo=settings.environment == "development"
-)
-{% endif %}
+if "postgresql" in settings.database_url:
+    engine = create_engine(
+        settings.database_url,
+        pool_pre_ping=True,
+        pool_size=10,
+        max_overflow=20,
+        echo=settings.debug
+    )
+elif "sqlite" in settings.database_url:
+    engine = create_engine(
+        settings.database_url,
+        connect_args={"check_same_thread": False},
+        echo=settings.debug
+    )
+else:
+    # No database configured - using in-memory SQLite for testing
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        echo=settings.debug
+    )
 
 # Create SessionLocal class (legacy sync support)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

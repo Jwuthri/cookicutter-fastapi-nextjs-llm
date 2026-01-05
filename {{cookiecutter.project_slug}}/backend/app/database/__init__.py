@@ -3,8 +3,8 @@ Database package for {{cookiecutter.project_name}}.
 """
 
 from .base import Base, SessionLocal, engine, get_db
-from .models import *
-from .repositories import *
+from .models import User, UserStatusEnum
+from .repositories import UserRepository
 
 __all__ = [
     # Database core
@@ -12,27 +12,9 @@ __all__ = [
     "get_db",
     "engine",
     "SessionLocal",
-
     # Database models
     "User",
-    "ChatSession",
-    "ChatMessage",
-    "Completion",
-    "ApiKey",
-    "TaskResult",
-
-    # Enums
     "UserStatusEnum",
-    "MessageRoleEnum",
-
     # Repositories
     "UserRepository",
-    "ChatSessionRepository",
-    "ChatMessageRepository",
-    "CompletionRepository",
-    "ApiKeyRepository",
-    "TaskResultRepository",
-
-    # Utilities
-    "ModelConverter",
 ]

@@ -1,0 +1,13 @@
+"""Prompts module."""
+
+from app.agents.prompt.context_manager import (
+    SYSTEM_PROMPT as CONTEXT_MANAGER_SYSTEM_PROMPT,
+    USER_CHECK_CONTEXT_TEMPLATE,
+    USER_REDUCE_CONTEXT_TEMPLATE,
+)
+
+__all__ = [
+    "CONTEXT_MANAGER_SYSTEM_PROMPT",
+    "USER_CHECK_CONTEXT_TEMPLATE",
+    "USER_REDUCE_CONTEXT_TEMPLATE",
+]

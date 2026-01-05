@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 // import { ClerkProvider } from "@clerk/nextjs";
-import { ChatProvider } from "@/components/providers/chat-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ToastProvider } from "@/components/providers/toast-provider";
 
@@ -14,8 +13,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "AI Agent App",
-  description: "A FastAPI + Next.js AI agent application",
+  title: "{{cookiecutter.project_name}}",
+  description: "{{cookiecutter.description}}",
 };
 
 export default function RootLayout({
@@ -31,7 +30,7 @@ export default function RootLayout({
         >
           <ThemeProvider>
             <ToastProvider>
-              <ChatProvider>{children}</ChatProvider>
+              {children}
             </ToastProvider>
           </ThemeProvider>
         </body>

@@ -27,9 +27,7 @@ class HealthResponse(BaseModel):
                 "version": "{{cookiecutter.version}}",
                 "environment": "development",
                 "services": {
-                    "redis": "healthy",
-                    "kafka": "healthy",
-                    "rabbitmq": "healthy"
+                    "database": "healthy"
                 }
             }
         }

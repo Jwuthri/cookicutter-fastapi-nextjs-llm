@@ -9,7 +9,6 @@ from datetime import datetime
 from sqlalchemy import JSON, Boolean, Column, DateTime
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import Integer, String
-from sqlalchemy.orm import relationship
 
 from ..base import Base
 
@@ -46,9 +45,7 @@ class User(Base):
     total_requests = Column(Integer, default=0)
     total_tokens_used = Column(Integer, default=0)
 
-    # Relationships
-    chat_sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
-    completions = relationship("Completion", back_populates="user", cascade="all, delete-orphan")
+    # Relationships (none for now)
 
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, status={self.status})>"

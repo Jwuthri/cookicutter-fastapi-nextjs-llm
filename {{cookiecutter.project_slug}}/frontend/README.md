@@ -2,99 +2,55 @@
 
 {{cookiecutter.description}}
 
-A modern, responsive Next.js frontend for AI-powered chat applications with real-time messaging, beautiful UI components, and seamless backend integration.
+A clean, modern Next.js frontend for the FastAPI backend with health monitoring and status dashboard.
 
 ## 🚀 Features
 
 ### Core Features
-
-- **💬 Interactive Chat Interface**: Beautiful, responsive chat UI with message history
-- **🔐 Authentication**: Clerk.com integration with Google social login support
-- **🚀 Real-time Messaging**: {% if cookiecutter.use_websockets == "yes" %}WebSocket support for instant communication{% else %}HTTP-based messaging with optimized polling{% endif %}
-- **🎨 Modern UI Components**: Custom-built components with consistent design system
-- **📱 Responsive Design**: Mobile-first approach that works on all devices
-- **⚡ Fast Performance**: Optimized with Next.js 14+ App Router for lightning-fast loading
-- **🔄 State Management**: Efficient context-based state management for chat sessions
-
-### User Experience
-
-- **👤 User Authentication**: Secure sign-in/sign-up with Google social login
-- **🔒 Protected Routes**: Automatic redirection for unauthenticated users
-- **💭 Typing Indicators**: Visual feedback during AI response generation
-- **🔍 Message Search**: Find previous conversations quickly
-- **💾 Session Persistence**: Automatic session saving and restoration
-- **🌙 Dark Theme**: Modern dark gradient theme with beautiful UI
-- **♿ Accessibility**: WCAG compliant with keyboard navigation support
-- **📧 Toast Notifications**: User-friendly error and success messages
+- **📊 Health Dashboard**: Real-time backend health status monitoring
+- **🔐 Clerk Authentication**: Ready for Clerk integration (optional)
+- **🎨 Modern UI**: Beautiful gradient design with dark theme
+- **⚡ Fast Performance**: Optimized with Next.js 14+ App Router
+- **📱 Responsive Design**: Works on all devices
+- **🔄 Real-time Updates**: Auto-refreshing health status
 
 ### Technical Features
-
-- **📦 Component Library**: Reusable UI components built with TypeScript
-- **🎣 Custom Hooks**: Specialized React hooks for chat functionality
-- **🔧 Configuration Management**: Environment-based settings
-- **🛡️ Error Handling**: Graceful error recovery and user feedback
-- **🎯 Performance Optimized**: Code splitting, lazy loading, and caching strategies
+- **📦 TypeScript**: Full type safety
+- **🎯 Component Library**: Reusable UI components
+- **🔧 API Client**: Simple, clean API integration
+- **🛡️ Error Handling**: Graceful error recovery
+- **🎯 Performance Optimized**: Code splitting and caching
 
 ## 🏗️ Architecture
 
 ### Project Structure
 
 ```
-├── src/
-│   ├── app/                    # Next.js 13+ App Router
-│   │   ├── globals.css        # Global styles
-│   │   ├── layout.tsx         # Root layout
-│   │   ├── page.tsx           # Home page
-│   │   ├── chat/              # Chat interface pages
-│   │   └── api/               # API routes (if needed)
-│   │
-│   ├── components/            # Reusable UI components
-│   │   ├── ui/               # Base UI components
-│   │   │   ├── button.tsx
-│   │   │   ├── input.tsx
-│   │   │   ├── card.tsx
-│   │   │   └── ...
-│   │   ├── chat/             # Chat-specific components
-│   │   │   ├── chat-container.tsx
-│   │   │   └── message-item.tsx
-│   │   ├── layout/           # Layout components
-│   │   └── providers/        # Context providers
-│   │
-│   ├── hooks/                # Custom React hooks
-│   │   ├── use-chat.ts       # Chat functionality
-│   │   ├── use-local-storage.ts
-│   │   └── use-debounce.ts
-│   │
-│   ├── lib/                  # Utilities and configurations
-│   │   ├── api.ts           # Backend API client
-│   │   ├── utils.ts         # Helper functions
-│   │   └── constants.ts     # App constants
-│   │
-│   └── types/               # TypeScript type definitions
-│       ├── chat.ts
-│       └── api.ts
+src/
+├── app/                    # Next.js App Router
+│   ├── globals.css        # Global styles
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Home page with health dashboard
+│   └── api/               # API routes
+│       └── health/        # Health check proxy
+│
+├── components/            # Reusable UI components
+│   ├── ui/               # Base UI components
+│   │   ├── button.tsx
+│   │   ├── input.tsx
+│   │   ├── card.tsx
+│   │   └── ...
+│   ├── layout/           # Layout components
+│   └── providers/        # Context providers
+│       ├── theme-provider.tsx
+│       └── toast-provider.tsx
+│
+├── lib/                  # Utilities and configurations
+│   ├── api.ts           # Backend API client
+│   └── utils.ts         # Helper functions
+│
+└── types/               # TypeScript type definitions
 ```
-
-### Key Components
-
-**Chat Components**:
-
-- `ChatContainer`: Complete chat interface with header, messages, and input
-- `MessageItem`: Individual message display with role-based styling and animations
-
-**UI Components**:
-
-- `Button`: Customizable button with variants
-- `Input`: Form input with validation states
-- `Card`: Container component for content sections
-- `Avatar`: User/AI avatar display
-- `Toast`: Notification system
-
-**Providers**:
-
-- `ChatProvider`: Global chat state management
-- `ThemeProvider`: Theme switching functionality
-- `ToastProvider`: Notification management
 
 ## 🚦 Quick Start
 
@@ -102,7 +58,7 @@ A modern, responsive Next.js frontend for AI-powered chat applications with real
 
 - **Node.js**: 18.0+
 - **npm/yarn/pnpm**: Latest version
-- **Backend API**: {{cookiecutter.project_name}} Backend running on port {{cookiecutter.backend_port}}
+- **Backend API**: {{cookiecutter.project_name}} Backend running on port 8000
 
 ### 1. Installation
 
@@ -120,20 +76,15 @@ pnpm install
 Create a `.env.local` file:
 
 ```bash
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your-clerk-publishable-key-here
-
 # Backend API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:{{cookiecutter.backend_port}}
-NEXT_PUBLIC_WS_URL={% if cookiecutter.use_websockets == "yes" %}ws://localhost:{{cookiecutter.backend_port}}{% else %}# WebSocket not enabled{% endif %}
+NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# Clerk Authentication (optional)
+# NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your-clerk-publishable-key-here
 
 # App Configuration
 NEXT_PUBLIC_APP_NAME={{cookiecutter.project_name}}
 NEXT_PUBLIC_APP_VERSION={{cookiecutter.version}}
-
-# Optional: Analytics, monitoring, etc.
-# NEXT_PUBLIC_ANALYTICS_ID=your-analytics-id
-# NEXT_PUBLIC_SENTRY_DSN=your-sentry-dsn
 ```
 
 ### 3. Development Server
@@ -155,56 +106,58 @@ Make sure your backend is running:
 
 ```bash
 # In backend directory
-./scripts/start.sh development
+cd ../backend
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The frontend will automatically connect to your backend API.
+The frontend will automatically connect to your backend API and display health status.
+
+## 📡 API Integration
+
+### Backend Endpoints
+
+The frontend integrates with these backend endpoints:
+
+```typescript
+// Health & Status
+GET  /api/v1/health/            // Health check
+GET  /api/v1/metrics/           // Metrics
+GET  /                          // API info
+```
+
+### API Client Usage
+
+```typescript
+import { apiClient } from "@/lib/api";
+
+// Health check
+const health = await apiClient.healthCheck();
+
+// Get API info
+const info = await apiClient.getRoot();
+
+// Get metrics
+const metrics = await apiClient.getMetrics();
+```
 
 ## 🎨 Styling & Theming
 
 ### Design System
 
-The application uses a custom design system built on top of modern CSS:
+The application uses a modern dark theme with gradient backgrounds:
 
 **Colors**:
-
-- Primary: Blue gradient (#3B82F6 → #1D4ED8)
-- Secondary: Gray scale (#F8FAFC → #0F172A)
-- Success: Green (#10B981)
-- Warning: Yellow (#F59E0B)
-- Error: Red (#EF4444)
+- Primary: Purple/Blue gradient
+- Background: Dark gray gradient (gray-950 → blue-950 → purple-950)
+- Accent: Purple, Pink, Blue gradients
 
 **Typography**:
-
 - Font Family: Inter (system fallback)
-- Scale: 12px → 48px with consistent rhythm
-- Weight: 400, 500, 600, 700
+- Scale: Responsive text sizing
 
-**Spacing**:
+### Dark Theme
 
-- Base unit: 4px
-- Scale: 4px, 8px, 12px, 16px, 24px, 32px, 48px, 64px
-
-### Theme Configuration
-
-```typescript
-// src/lib/theme.ts
-export const theme = {
-  colors: {
-    primary: "hsl(221.2 83.2% 53.3%)",
-    secondary: "hsl(210 40% 98%)",
-    // ... more colors
-  },
-  fonts: {
-    sans: ["Inter", "system-ui", "sans-serif"],
-  },
-  // ... more theme options
-};
-```
-
-### Dark Mode
-
-Built-in dark mode support with system preference detection:
+Built-in dark mode with system preference detection:
 
 ```typescript
 // Automatic theme detection
@@ -214,114 +167,6 @@ const { theme, setTheme } = useTheme()
 <button onClick={() => setTheme('dark')}>
   Switch to Dark Mode
 </button>
-```
-
-## 💬 Chat Features
-
-### Message Types
-
-The chat interface supports various message types:
-
-```typescript
-type MessageRole = "user" | "assistant" | "system";
-
-interface ChatMessage {
-  id: string;
-  content: string;
-  role: MessageRole;
-  timestamp: string;
-  metadata?: Record<string, any>;
-}
-```
-
-### Session Management
-
-Automatic session handling:
-
-```typescript
-// Custom hook for chat functionality
-const { messages, sendMessage, isLoading, error, clearChat, sessionId } =
-  useChat();
-
-// Send a message
-await sendMessage("Hello, how can you help me?");
-```
-
-### Real-time Updates
-
-{% if cookiecutter.use_websockets == "yes" %}
-**WebSocket Integration**:
-
-```typescript
-// WebSocket connection management
-const { connected, reconnect } = useWebSocket({
-  url: process.env.NEXT_PUBLIC_WS_URL,
-  onMessage: handleNewMessage,
-  onError: handleConnectionError,
-});
-```
-
-{% else %}
-**HTTP Polling**:
-
-```typescript
-// Optimized polling for message updates
-const { messages, refresh } = useChatPolling({
-  interval: 1000, // 1 second
-  enabled: isActive,
-});
-```
-
-{% endif %}
-
-### Message Features
-
-- **Rich Text Support**: Markdown rendering for AI responses
-- **Code Syntax Highlighting**: Automatic language detection
-- **Link Detection**: Clickable URLs with security measures
-- **Image Support**: Display images in messages (configurable)
-- **Copy to Clipboard**: Easy message copying
-
-## 🔧 Configuration
-
-### API Configuration
-
-```typescript
-// src/lib/api.ts
-export const apiConfig = {
-  baseURL:
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:{{cookiecutter.backend_port}}",
-  timeout: 30000,
-  retries: 3,
-  retryDelay: 1000,
-};
-```
-
-### Chat Settings
-
-```typescript
-// src/lib/constants.ts
-export const CHAT_SETTINGS = {
-  MAX_MESSAGE_LENGTH: 2000,
-  AUTO_SAVE_INTERVAL: 5000,
-  MAX_MESSAGES_DISPLAY: 100,
-  TYPING_INDICATOR_DELAY: 500,
-  RECONNECT_ATTEMPTS: 5,
-};
-```
-
-### Feature Flags
-
-```typescript
-// src/lib/features.ts
-export const FEATURES = {
-  WEBSOCKETS: {% if cookiecutter.use_websockets == "yes" %}true{% else %}false{% endif %},
-  DARK_MODE: true,
-  MESSAGE_SEARCH: true,
-  FILE_UPLOAD: false, // Future feature
-  VOICE_INPUT: false  // Future feature
-}
 ```
 
 ## 🧪 Development
@@ -343,55 +188,19 @@ npm run type-check
 
 # Linting
 npm run lint
-npm run lint:fix
-
-# Testing
-npm run test
-npm run test:watch
-npm run test:e2e
 ```
 
 ### Code Quality
 
-**ESLint Configuration**:
-
-```json
-{
-  "extends": ["next/core-web-vitals", "@typescript-eslint/recommended"],
-  "rules": {
-    "no-unused-vars": "error",
-    "@typescript-eslint/no-unused-vars": "error"
-  }
-}
-```
-
 **TypeScript Strict Mode**:
+- Full type safety
+- No implicit any
+- Strict null checks
 
-```json
-{
-  "compilerOptions": {
-    "strict": true,
-    "noImplicitAny": true,
-    "strictNullChecks": true
-  }
-}
-```
-
-### Testing
-
-**Unit Testing** (Jest + Testing Library):
-
-```bash
-# Run unit tests
-npm run test
-```
-
-**End-to-End Testing** (Playwright):
-
-```bash
-# Run E2E tests
-npm run test:e2e
-```
+**ESLint Configuration**:
+- Next.js recommended rules
+- TypeScript rules
+- React best practices
 
 ## 🐳 Docker Support
 
@@ -414,23 +223,6 @@ CMD ["npm", "run", "dev"]
 # Build and run
 docker build -t {{cookiecutter.project_slug}}-frontend .
 docker run -p {{cookiecutter.frontend_port}}:{{cookiecutter.frontend_port}} {{cookiecutter.project_slug}}-frontend
-```
-
-### Docker Compose Integration
-
-The frontend works seamlessly with the backend Docker setup:
-
-```yaml
-# docker-compose.yml (in project root)
-services:
-  frontend:
-    build: ./frontend
-    ports:
-      - "{{cookiecutter.frontend_port}}:{{cookiecutter.frontend_port}}"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://backend:{{cookiecutter.backend_port}}
-    depends_on:
-      - backend
 ```
 
 ## 🚀 Deployment
@@ -469,9 +261,6 @@ npm run build
 
 # Start production server
 npm run start
-
-# Or export static files
-npm run build && npm run export
 ```
 
 ### Environment Variables for Production
@@ -479,21 +268,19 @@ npm run build && npm run export
 **Required**:
 
 ```bash
-# Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_your-clerk-publishable-key
-
 # Backend API
 NEXT_PUBLIC_API_URL=https://your-backend-api.com
-NEXT_PUBLIC_WS_URL=wss://your-backend-api.com  # if WebSocket enabled
 ```
 
 **Optional**:
 
 ```bash
+# Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_your-clerk-publishable-key
+
+# App Configuration
 NEXT_PUBLIC_APP_NAME="Your App Name"
-NEXT_PUBLIC_ANALYTICS_ID=your-analytics-id
-NEXT_PUBLIC_SENTRY_DSN=your-sentry-dsn
-NEXT_PUBLIC_ENVIRONMENT=production
+NEXT_PUBLIC_APP_VERSION="1.0.0"
 ```
 
 ## 🔧 Customization
@@ -535,19 +322,6 @@ export function useCustomHook() {
 }
 ```
 
-### Styling Components
-
-```tsx
-// Using Tailwind CSS classes
-<div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900 rounded-lg shadow-sm">
-  <span className="text-gray-900 dark:text-gray-100">Content</span>
-</div>;
-
-// Using CSS modules (optional)
-import styles from "./component.module.css";
-<div className={styles.container}>Content</div>;
-```
-
 ## 🐛 Troubleshooting
 
 ### Common Issues
@@ -556,7 +330,7 @@ import styles from "./component.module.css";
 
 ```bash
 # Check if backend is running
-curl http://localhost:{{cookiecutter.backend_port}}/health
+curl http://localhost:8000/api/v1/health/
 
 # Verify environment variables
 echo $NEXT_PUBLIC_API_URL
@@ -583,26 +357,6 @@ npm run type-check
 npm run build
 ```
 
-**WebSocket Connection Issues**:
-{% if cookiecutter.use_websockets == "yes" %}
-
-```bash
-# Test WebSocket connection
-wscat -c ws://localhost:{{cookiecutter.backend_port}}/ws/test-session
-
-# Check browser console for connection errors
-# Verify NEXT_PUBLIC_WS_URL is correctly set
-```
-
-{% else %}
-
-```bash
-# WebSocket not enabled in this configuration
-# Messages use HTTP polling instead
-```
-
-{% endif %}
-
 ### Debug Mode
 
 ```bash
@@ -613,48 +367,15 @@ NEXT_PUBLIC_DEBUG=true npm run dev
 # Network tab shows API calls and responses
 ```
 
-### Performance Issues
+## 🔐 Security
 
-```bash
-# Analyze bundle size
-npm run analyze
+### Best Practices
 
-# Check performance metrics
-# Lighthouse audit in Chrome DevTools
-
-# Monitor memory usage in React DevTools
-```
-
-## 🤝 Contributing
-
-### Development Workflow
-
-1. **Create Feature Branch**: `git checkout -b feature/awesome-feature`
-2. **Make Changes**: Follow code style guidelines
-3. **Run Tests**: `npm run test`
-4. **Type Check**: `npm run type-check`
-5. **Lint Code**: `npm run lint:fix`
-6. **Commit Changes**: Use conventional commits
-7. **Push & PR**: Create pull request
-
-### Code Guidelines
-
-- **TypeScript**: Use strict typing, avoid `any`
-- **Components**: Functional components with hooks
-- **Styling**: Tailwind CSS with semantic class names
-- **Testing**: Write tests for new components
-- **Accessibility**: Follow WCAG guidelines
-
-### Commit Messages
-
-```bash
-# Use conventional commits
-feat: add message search functionality
-fix: resolve WebSocket connection issues
-docs: update README with deployment guide
-style: improve chat message styling
-test: add unit tests for chat components
-```
+- **Environment Variables**: Never expose secrets in client code
+- **API Security**: Validate all inputs, sanitize outputs
+- **XSS Protection**: Use React's built-in XSS protection
+- **Content Security Policy**: Configure CSP headers
+- **HTTPS Only**: Always use HTTPS in production
 
 ## 📊 Performance
 
@@ -671,83 +392,17 @@ The application is optimized for:
 - **Code Splitting**: Automatic route-based splitting
 - **Image Optimization**: Next.js Image component
 - **Font Optimization**: Automatic font loading
-- **Bundle Analysis**: Webpack bundle analyzer
 - **Caching**: Static asset caching with CDN support
 
-## 📚 API Integration
+## 📚 Additional Resources
 
-### Backend Endpoints
-
-```typescript
-// Chat API
-POST /api/v1/chat/              // Send message
-GET  /api/v1/chat/sessions      // List sessions
-GET  /api/v1/chat/sessions/:id  // Get session
-DELETE /api/v1/chat/sessions/:id // Delete session
-
-// Health & Status
-GET  /api/v1/health/            // Health check
-```
-
-### API Client Usage
-
-```typescript
-import { apiClient } from "@/lib/api";
-
-// Send message
-const response = await apiClient.post("/chat/", {
-  message: "Hello",
-  session_id: sessionId,
-});
-
-// Handle errors
-try {
-  const data = await apiClient.get("/chat/sessions");
-} catch (error) {
-  console.error("API Error:", error.message);
-}
-```
-
-## 🔐 Security
-
-### Best Practices
-
-- **Environment Variables**: Never expose secrets in client code
-- **API Security**: Validate all inputs, sanitize outputs
-- **XSS Protection**: Use React's built-in XSS protection
-- **Content Security Policy**: Configure CSP headers
-- **HTTPS Only**: Always use HTTPS in production
-
-### Security Headers
-
-```javascript
-// next.config.js
-const securityHeaders = [
-  {
-    key: "X-DNS-Prefetch-Control",
-    value: "on",
-  },
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
-  },
-  {
-    key: "X-Frame-Options",
-    value: "SAMEORIGIN",
-  },
-];
-```
+- **Next.js Documentation**: https://nextjs.org/docs
+- **TypeScript Documentation**: https://www.typescriptlang.org/docs
+- **Backend API**: See backend README for API documentation
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🏢 Support
-
-- **Documentation**: Check component storybook at `/storybook`
-- **Issues**: GitHub Issues
-- **Discussions**: GitHub Discussions
-- **Backend API**: See backend README for API documentation
 
 ---
 

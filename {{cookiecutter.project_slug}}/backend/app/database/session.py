@@ -48,7 +48,7 @@ def create_async_database_engine() -> AsyncEngine:
         # In-memory SQLite for testing
         return create_async_engine(
             "sqlite+aiosqlite:///:memory:",
-            echo=settings.environment == "development",
+            echo=settings.debug,
             poolclass=StaticPool,
             connect_args={"check_same_thread": False},
             future=True
@@ -60,7 +60,7 @@ def create_async_database_engine() -> AsyncEngine:
         # SQLite configuration
         return create_async_engine(
             database_url,
-            echo=settings.environment == "development",
+            echo=settings.debug,
             poolclass=StaticPool,
             connect_args={"check_same_thread": False},
             future=True
@@ -69,7 +69,7 @@ def create_async_database_engine() -> AsyncEngine:
         # PostgreSQL configuration
         return create_async_engine(
             database_url,
-            echo=settings.environment == "development",
+            echo=settings.debug,
             pool_size=20,
             max_overflow=30,
             pool_pre_ping=True,
@@ -80,7 +80,7 @@ def create_async_database_engine() -> AsyncEngine:
         # Generic configuration
         return create_async_engine(
             database_url,
-            echo=settings.environment == "development",
+            echo=settings.debug,
             future=True
         )
 
@@ -101,21 +101,8 @@ def get_async_engine() -> AsyncEngine:
 
 def _register_database_monitoring(engine: AsyncEngine):
     """Register the database engine for monitoring."""
-    try:
-        from app.core.monitoring.database import db_monitoring_service
-
-        # Determine pool name from database URL
-        settings = get_settings()
-        pool_name = "default"
-
-        if settings.database_url:
-            if "postgresql" in settings.database_url:
-                pool_name = "postgresql"
-            elif "sqlite" in settings.database_url:
-                pool_name = "sqlite"
-
-        db_monitoring_service.register_pool(engine, pool_name)
-        logger.info(f"Database monitoring registered for pool: {pool_name}")
+    # Monitoring removed - simplified backend
+    pass
 
     except ImportError:
         logger.warning("Database monitoring not available - skipping registration")

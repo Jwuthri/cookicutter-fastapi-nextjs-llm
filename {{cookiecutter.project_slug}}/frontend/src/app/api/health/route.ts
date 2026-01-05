@@ -5,9 +5,9 @@ export async function GET(request: NextRequest) {
     // Check backend API health
     const backendUrl =
       process.env.NEXT_PUBLIC_API_URL ||
-      "http://localhost:{{cookiecutter.backend_port}}";
+      "http://localhost:8000";
 
-    const response = await fetch(`${backendUrl}/health`, {
+    const response = await fetch(`${backendUrl}/api/v1/health/`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
