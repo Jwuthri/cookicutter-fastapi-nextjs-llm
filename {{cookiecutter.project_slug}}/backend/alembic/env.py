@@ -40,8 +40,25 @@ target_metadata = Base.metadata
 settings = get_settings()
 database_url = settings.database_url
 
-# Override the sqlalchemy.url in alembic.ini with the one from settings
-config.set_main_option("sqlalchemy.url", database_url)
+# Convert async URLs to sync for Alembic (Alembic uses sync engines)
+def get_sync_database_url(url: str) -> str:
+    """Convert async database URL to sync for Alembic."""
+    if not url:
+        return "sqlite:///:memory:"
+    
+    # Convert async URLs to sync
+    if url.startswith("postgresql+asyncpg://"):
+        return url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    elif url.startswith("sqlite+aiosqlite://"):
+        return url.replace("sqlite+aiosqlite://", "sqlite://", 1)
+    # Already sync or unknown format - return as-is
+    return url
+
+# Convert to sync URL for Alembic
+sync_database_url = get_sync_database_url(database_url)
+
+# Override the sqlalchemy.url in alembic.ini with the sync version
+config.set_main_option("sqlalchemy.url", sync_database_url)
 
 
 def run_migrations_offline() -> None:
@@ -79,7 +96,7 @@ def run_migrations_online() -> None:
     """
     # Create engine configuration
     configuration = config.get_section(config.config_ini_section)
-    configuration["sqlalchemy.url"] = database_url
+    configuration["sqlalchemy.url"] = sync_database_url
 
     connectable = engine_from_config(
         configuration,

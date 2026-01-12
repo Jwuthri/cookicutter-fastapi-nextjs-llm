@@ -29,14 +29,25 @@ _async_session_factory: Optional[async_sessionmaker[AsyncSession]] = None
 
 def get_async_database_url(database_url: str) -> str:
     """Convert sync database URL to async."""
-    if database_url.startswith("sqlite:///"):
+    if not database_url:
+        return "sqlite+aiosqlite:///:memory:"
+    
+    # If already async, return as-is
+    if "+asyncpg" in database_url or "+aiosqlite" in database_url:
+        return database_url
+    
+    # Convert sync URLs to async
+    if database_url.startswith("sqlite://"):
         # SQLite: replace sqlite:// with sqlite+aiosqlite://
         return database_url.replace("sqlite://", "sqlite+aiosqlite://", 1)
     elif database_url.startswith("postgresql://"):
         # PostgreSQL: replace postgresql:// with postgresql+asyncpg://
         return database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    elif database_url.startswith("postgresql+psycopg2://"):
+        # PostgreSQL with psycopg2: replace with asyncpg
+        return database_url.replace("postgresql+psycopg2://", "postgresql+asyncpg://", 1)
     else:
-        # Assume it's already async-compatible
+        # Assume it's already async-compatible or return as-is
         return database_url
 
 
@@ -51,7 +62,6 @@ def create_async_database_engine() -> AsyncEngine:
             echo=settings.debug,
             poolclass=StaticPool,
             connect_args={"check_same_thread": False},
-            future=True
         )
 
     database_url = get_async_database_url(settings.database_url)
@@ -63,7 +73,6 @@ def create_async_database_engine() -> AsyncEngine:
             echo=settings.debug,
             poolclass=StaticPool,
             connect_args={"check_same_thread": False},
-            future=True
         )
     elif database_url.startswith("postgresql"):
         # PostgreSQL configuration
@@ -74,14 +83,12 @@ def create_async_database_engine() -> AsyncEngine:
             max_overflow=30,
             pool_pre_ping=True,
             pool_recycle=3600,  # 1 hour
-            future=True
         )
     else:
         # Generic configuration
         return create_async_engine(
             database_url,
             echo=settings.debug,
-            future=True
         )
 
 
@@ -103,11 +110,6 @@ def _register_database_monitoring(engine: AsyncEngine):
     """Register the database engine for monitoring."""
     # Monitoring removed - simplified backend
     pass
-
-    except ImportError:
-        logger.warning("Database monitoring not available - skipping registration")
-    except Exception as e:
-        logger.error(f"Failed to register database monitoring: {e}")
 
 
 def get_async_session_factory() -> async_sessionmaker[AsyncSession]:

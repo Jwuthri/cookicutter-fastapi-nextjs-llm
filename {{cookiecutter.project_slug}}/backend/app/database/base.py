@@ -21,22 +21,34 @@ logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 Base = declarative_base()
 
 # Legacy sync database support (for backwards compatibility)
-if "postgresql" in settings.database_url:
+# Only create sync engine if URL is actually sync (not async)
+database_url = settings.database_url or ""
+if database_url.startswith("postgresql://") and "+asyncpg" not in database_url:
+    # Sync PostgreSQL
     engine = create_engine(
-        settings.database_url,
+        database_url,
         pool_pre_ping=True,
         pool_size=10,
         max_overflow=20,
         echo=settings.debug
     )
-elif "sqlite" in settings.database_url:
+elif database_url.startswith("sqlite://") and "+aiosqlite" not in database_url:
+    # Sync SQLite
     engine = create_engine(
-        settings.database_url,
+        database_url,
         connect_args={"check_same_thread": False},
         echo=settings.debug
     )
+elif not database_url or database_url.startswith("postgresql+asyncpg") or database_url.startswith("sqlite+aiosqlite"):
+    # Async URL or no URL - create a dummy sync engine that won't be used
+    # This prevents errors but the sync engine won't actually work with async URLs
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        echo=False  # Don't echo for dummy engine
+    )
 else:
-    # No database configured - using in-memory SQLite for testing
+    # Fallback - in-memory SQLite for testing
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
