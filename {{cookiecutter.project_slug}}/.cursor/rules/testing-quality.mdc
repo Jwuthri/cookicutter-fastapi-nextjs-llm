@@ -27,7 +27,6 @@ class TestChatService:
     def mock_dependencies(self):
         """Create mock dependencies for ChatService."""
         return {
-            "memory_store": MockMemoryStore(),
             "llm_service": MockLLMService(),
             "settings": MockSettings()
         }

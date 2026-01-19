@@ -86,7 +86,15 @@ def client(test_settings, test_db_session) -> Generator[TestClient, None, None]:
 
 
 # Repository fixtures
-@pytest.fixture
-def user_repository(test_db_session) -> UserRepository:
-    """Get user repository."""
-    return UserRepository(test_db_session)
+@pytest_asyncio.fixture
+async def test_user(test_db_session):
+    """Create a test user for testing."""
+    user = await UserRepository.create(
+        db=test_db_session,
+        clerk_id="user_test_fixture",
+        username="testuser",
+        email="test@example.com",
+        full_name="Test User"
+    )
+    await test_db_session.commit()
+    return {"id": user.id, "clerk_id": user.clerk_id}

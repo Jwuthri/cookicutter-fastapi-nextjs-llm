@@ -5,7 +5,6 @@ API-specific dependencies for {{cookiecutter.project_name}}.
 from typing import Optional
 
 from app.config import Settings, get_settings
-from app.database.repositories import UserRepository
 from fastapi import Depends, Header, HTTPException, status
 
 

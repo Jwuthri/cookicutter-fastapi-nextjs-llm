@@ -274,19 +274,98 @@ print(f"Max completion: {limits['max_completion_tokens']}")
 
 ## 🧪 Testing
 
+### Running Tests
+
 ```bash
 # Run all tests
 pytest
 
-# Run with coverage
+# Run with coverage report
 pytest --cov=app --cov-report=html
 
 # Run specific test file
-pytest tests/unit/test_auth.py
+pytest tests/unit/test_user_repository.py
 
-# Run integration tests
-pytest tests/integration/
+# Run tests by marker
+pytest -m unit              # Unit tests only
+pytest -m integration       # Integration tests only
+pytest -m database          # Database tests only
+
+# Run with verbose output
+pytest -v
+
+# Run specific test function
+pytest tests/unit/test_user_repository.py::TestUserRepository::test_create_user
+
+# Run tests matching a pattern
+pytest -k "user"            # Tests with "user" in name
+
+# Run tests in parallel (requires pytest-xdist)
+pytest -n auto
 ```
+
+### Test Structure
+
+```
+tests/
+├── conftest.py                    # Test fixtures and configuration
+├── unit/                          # Unit tests (fast, isolated)
+│   └── test_user_repository.py   # User repository tests
+├── integration/                   # Integration tests
+│   └── test_health_api.py        # API integration tests
+└── performance/                  # Performance tests
+    └── test_load_testing.py      # Load testing
+```
+
+### Test Coverage
+
+The project aims for 80%+ test coverage. View coverage reports:
+
+```bash
+# Generate HTML coverage report
+pytest --cov=app --cov-report=html
+
+# Open coverage report
+open htmlcov/index.html  # macOS
+xdg-open htmlcov/index.html  # Linux
+```
+
+### Writing Tests
+
+Tests use pytest with async support. Example:
+
+```python
+import pytest
+from app.database.repositories import UserRepository
+
+@pytest.mark.asyncio
+@pytest.mark.unit
+@pytest.mark.database
+class TestUserRepository:
+    async def test_create_user(self, test_db_session):
+        user = await UserRepository.create(
+            db=test_db_session,
+            clerk_id="user_test123",
+            email="test@example.com"
+        )
+        assert user.clerk_id == "user_test123"
+```
+
+### Available Fixtures
+
+- `test_db_session`: Async database session (in-memory SQLite)
+- `test_user`: Pre-created test user with Clerk ID
+- `client`: FastAPI test client with dependency overrides
+- `test_settings`: Test-specific settings
+
+### Test Markers
+
+Use markers to categorize tests:
+
+- `@pytest.mark.unit`: Fast unit tests
+- `@pytest.mark.integration`: Integration tests
+- `@pytest.mark.database`: Database-dependent tests
+- `@pytest.mark.slow`: Tests taking >5 seconds
 
 ## 📚 Examples
 

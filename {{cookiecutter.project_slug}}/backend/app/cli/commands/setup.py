@@ -43,7 +43,7 @@ def init():
             "[bold green]✓ Application setup completed successfully![/bold green]\n\n"
             "Next steps:\n"
             "• Review your .env file\n"
-            "• Configure your LLM provider settings\n"
+            "• Set OPENROUTER_API_KEY for LLM access\n"
             "• Run: [bold]python -m app.cli server start[/bold]",
             title="Setup Complete"
         ))
@@ -91,15 +91,9 @@ DATABASE_URL=postgresql://user:password@localhost/dbname
 REDIS_URL=redis://localhost:6379/0
 
 # LLM Configuration
-# OpenAI
-OPENAI_API_KEY=your-openai-api-key
-
-# Anthropic
-ANTHROPIC_API_KEY=your-anthropic-api-key
-
-# Custom LLM
-CUSTOM_LLM_BASE_URL=http://localhost:8080
-CUSTOM_LLM_API_KEY=your-custom-api-key
+# OpenRouter (provides access to 500+ models)
+OPENROUTER_API_KEY=your-openrouter-api-key
+DEFAULT_MODEL=openai/gpt-4o-mini
 
 # Rate Limiting
 RATE_LIMIT_PER_MINUTE=60

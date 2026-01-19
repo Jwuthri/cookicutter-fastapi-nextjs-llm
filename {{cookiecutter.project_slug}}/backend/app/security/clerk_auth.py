@@ -11,7 +11,7 @@ import jwt
 from app.config import Settings, get_settings
 from app.exceptions import UnauthorizedError, ValidationError
 from app.utils.logging import get_logger
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 

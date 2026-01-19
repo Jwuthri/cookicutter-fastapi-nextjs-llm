@@ -1,10 +1,9 @@
 """Context manager agent for managing LLM context limits."""
-from typing import List, Optional, Dict, Any
+from typing import List, Dict, Any
 from dataclasses import dataclass
 
 # Note: create_agent will be available in future LangChain versions
 # For now, we'll use direct LLM calls with structured outputs
-from langchain_core.messages import HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.agents.structured_output.context_manager import (
@@ -22,7 +21,6 @@ from app.utils.logging import get_logger
 from app.utils.token_counter import (
     count_tokens_llm,
     get_model_context_limit,
-    calculate_safe_context_limit,
 )
 from app.config import get_settings
 

@@ -5,9 +5,7 @@ Simple metrics endpoints for {{cookiecutter.project_name}}.
 from typing import Any, Dict
 
 from app.config import Settings, get_settings
-from app.models.base import StatusResponse
-from fastapi import APIRouter, Depends, status
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends
 
 router = APIRouter()
 

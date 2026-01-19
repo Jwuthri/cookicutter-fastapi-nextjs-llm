@@ -18,9 +18,10 @@ class UserRepository:
     """Repository for User model operations."""
 
     @staticmethod
-    async def create(db: AsyncSession, email: str, username: str = None, full_name: str = None, **kwargs) -> User:
-        """Create a new user."""
+    async def create(db: AsyncSession, clerk_id: str, email: str = None, username: str = None, full_name: str = None, **kwargs) -> User:
+        """Create a new user from Clerk authentication."""
         user = User(
+            clerk_id=clerk_id,
             email=email,
             username=username,
             full_name=full_name,
@@ -29,7 +30,7 @@ class UserRepository:
         db.add(user)
         await db.flush()
         await db.refresh(user)
-        logger.info(f"Created user: {user.id}")
+        logger.info(f"Created user: {user.id} (clerk_id: {clerk_id})")
         return user
 
     @staticmethod
@@ -48,6 +49,12 @@ class UserRepository:
     async def get_by_username(db: AsyncSession, username: str) -> Optional[User]:
         """Get user by username."""
         result = await db.execute(select(User).where(User.username == username))
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_by_clerk_id(db: AsyncSession, clerk_id: str) -> Optional[User]:
+        """Get user by Clerk ID."""
+        result = await db.execute(select(User).where(User.clerk_id == clerk_id))
         return result.scalar_one_or_none()
 
     @staticmethod
@@ -83,15 +90,6 @@ class UserRepository:
             return True
         return False
 
-    @staticmethod
-    async def increment_usage(db: AsyncSession, user_id: str, requests: int = 1, tokens: int = 0):
-        """Increment user usage counters."""
-        user = await UserRepository.get_by_id(db, user_id)
-        if user:
-            user.total_requests += requests
-            user.total_tokens_used += tokens
-            user.updated_at = datetime.utcnow()
-            await db.flush()
 
     @staticmethod
     async def update_last_login(db: AsyncSession, user_id: str) -> Optional[User]:

@@ -126,14 +126,14 @@ class EnhancedErrorResponse(BaseModel):
                 "details": [
                     {
                         "type": "value_error",
-                        "message": "Password must be at least 8 characters long",
-                        "field": "password",
-                        "code": "PASSWORD_TOO_SHORT"
+                        "message": "Field validation failed",
+                        "field": "email",
+                        "code": "INVALID_FORMAT"
                     }
                 ],
                 "request_id": "req_123456789",
                 "timestamp": "2024-01-01T12:00:00.000Z",
-                "path": "/api/v1/auth/register",
+                "path": "/api/v1/users",
                 "method": "POST"
             }
         }

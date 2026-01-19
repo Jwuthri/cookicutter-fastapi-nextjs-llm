@@ -18,44 +18,8 @@ class UserStatusEnum(str, Enum):
 
 
 # Request models
-class UserRegistrationRequest(BaseModel):
-    """User registration request model."""
-    username: str = Field(..., min_length=3, max_length=50, description="Username")
-    email: EmailStr = Field(..., description="Email address")
-    password: str = Field(..., min_length=8, description="Password")
-    full_name: Optional[str] = Field(None, max_length=100, description="Full name")
-
-    @validator("username")
-    def validate_username(cls, v):
-        """Validate username format."""
-        import re
-        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
-            raise ValueError("Username can only contain letters, numbers, hyphens, and underscores")
-        return v.lower()
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "username": "johndoe",
-                "email": "john.doe@example.com",
-                "password": "SecurePass123!",
-                "full_name": "John Doe"
-            }
-        }
-
-
-class UserLoginRequest(BaseModel):
-    """User login request model."""
-    username_or_email: str = Field(..., description="Username or email address")
-    password: str = Field(..., description="Password")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "username_or_email": "johndoe",
-                "password": "SecurePass123!"
-            }
-        }
+# Note: User registration and login are handled by Clerk authentication
+# Users are created automatically when they authenticate via Clerk
 
 
 class UserUpdateRequest(BaseModel):
@@ -78,29 +42,16 @@ class UserUpdateRequest(BaseModel):
         }
 
 
-class PasswordChangeRequest(BaseModel):
-    """Password change request model."""
-    current_password: str = Field(..., description="Current password")
-    new_password: str = Field(..., min_length=8, description="New password")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "current_password": "OldPass123!",
-                "new_password": "NewSecurePass123!"
-            }
-        }
-
-
 # Response models
 class UserProfile(BaseModel):
     """User profile response model."""
-    id: int = Field(..., description="User ID")
-    username: str = Field(..., description="Username")
-    email: str = Field(..., description="Email address")
+    id: str = Field(..., description="User ID")
+    clerk_id: str = Field(..., description="Clerk user ID")
+    username: Optional[str] = Field(None, description="Username")
+    email: Optional[str] = Field(None, description="Email address")
     full_name: Optional[str] = Field(None, description="Full name")
     bio: Optional[str] = Field(None, description="User biography")
-    is_active: bool = Field(..., description="Whether user is active")
+    is_active: bool = Field(..., description="Whether user is active (computed from status)")
     is_superuser: bool = Field(False, description="Whether user has admin privileges")
     status: UserStatusEnum = Field(..., description="User status")
     created_at: datetime = Field(..., description="Account creation timestamp")
@@ -111,7 +62,8 @@ class UserProfile(BaseModel):
         from_attributes = True  # For SQLAlchemy model conversion
         json_schema_extra = {
             "example": {
-                "id": 1,
+                "id": "uuid-here",
+                "clerk_id": "user_2abc123xyz",
                 "username": "johndoe",
                 "email": "john.doe@example.com",
                 "full_name": "John Doe",
@@ -128,8 +80,9 @@ class UserProfile(BaseModel):
 
 class UserPublicProfile(BaseModel):
     """Public user profile (limited information)."""
-    id: int = Field(..., description="User ID")
-    username: str = Field(..., description="Username")
+    id: str = Field(..., description="User ID")
+    clerk_id: str = Field(..., description="Clerk user ID")
+    username: Optional[str] = Field(None, description="Username")
     full_name: Optional[str] = Field(None, description="Full name")
     bio: Optional[str] = Field(None, description="User biography")
     created_at: datetime = Field(..., description="Account creation timestamp")
@@ -138,7 +91,8 @@ class UserPublicProfile(BaseModel):
         from_attributes = True
         json_schema_extra = {
             "example": {
-                "id": 1,
+                "id": "uuid-here",
+                "clerk_id": "user_2abc123xyz",
                 "username": "johndoe",
                 "full_name": "John Doe",
                 "bio": "Software developer passionate about AI",
@@ -149,9 +103,8 @@ class UserPublicProfile(BaseModel):
 
 class UserStats(BaseModel):
     """User statistics response model."""
-    user_id: int = Field(..., description="User ID")
-    total_requests: int = Field(0, description="Total API requests made")
-    total_tokens: int = Field(0, description="Total tokens consumed")
+    user_id: str = Field(..., description="User ID")
+    clerk_id: str = Field(..., description="Clerk user ID")
     total_sessions: int = Field(0, description="Total chat sessions created")
     total_messages: int = Field(0, description="Total messages sent")
     last_active_at: Optional[datetime] = Field(None, description="Last activity timestamp")
@@ -160,9 +113,8 @@ class UserStats(BaseModel):
         from_attributes = True
         json_schema_extra = {
             "example": {
-                "user_id": 1,
-                "total_requests": 150,
-                "total_tokens": 25000,
+                "user_id": "uuid-here",
+                "clerk_id": "user_2abc123xyz",
                 "total_sessions": 12,
                 "total_messages": 89,
                 "last_active_at": "2024-01-15T09:00:00Z"
@@ -170,43 +122,18 @@ class UserStats(BaseModel):
         }
 
 
-class LoginResponse(BaseModel):
-    """Login response model."""
-    user: UserProfile = Field(..., description="User profile information")
-    access_token: str = Field(..., description="JWT access token")
-    token_type: str = Field("bearer", description="Token type")
-    expires_in: int = Field(..., description="Token expiration in seconds")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "user": {
-                    "id": 1,
-                    "username": "johndoe",
-                    "email": "john.doe@example.com",
-                    "full_name": "John Doe",
-                    "is_active": True,
-                    "status": "active"
-                },
-                "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-                "token_type": "bearer",
-                "expires_in": 1800
-            }
-        }
-
-
 # List models
 class UserListItem(BaseModel):
     """User list item for admin views."""
-    id: int = Field(..., description="User ID")
-    username: str = Field(..., description="Username")
-    email: str = Field(..., description="Email address")
+    id: str = Field(..., description="User ID")
+    clerk_id: str = Field(..., description="Clerk user ID")
+    username: Optional[str] = Field(None, description="Username")
+    email: Optional[str] = Field(None, description="Email address")
     full_name: Optional[str] = Field(None, description="Full name")
     is_active: bool = Field(..., description="Whether user is active")
     status: UserStatusEnum = Field(..., description="User status")
     created_at: datetime = Field(..., description="Account creation timestamp")
     last_login_at: Optional[datetime] = Field(None, description="Last login timestamp")
-    total_requests: int = Field(0, description="Total API requests")
 
     class Config:
         from_attributes = True
@@ -225,15 +152,15 @@ class UserListResponse(BaseModel):
             "example": {
                 "users": [
                     {
-                        "id": 1,
+                        "id": "uuid-here",
+                        "clerk_id": "user_2abc123xyz",
                         "username": "johndoe",
                         "email": "john.doe@example.com",
                         "full_name": "John Doe",
                         "is_active": True,
                         "status": "active",
                         "created_at": "2024-01-01T12:00:00Z",
-                        "last_login_at": "2024-01-15T09:00:00Z",
-                        "total_requests": 150
+                        "last_login_at": "2024-01-15T09:00:00Z"
                     }
                 ],
                 "total": 1,

@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 from app.config import Settings, get_settings
 from app.models.base import HealthResponse
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends
 
 router = APIRouter()
 

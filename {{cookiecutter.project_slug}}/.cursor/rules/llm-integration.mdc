@@ -7,10 +7,50 @@ description: "LLM and AI agent integration patterns and best practices"
 Follow these patterns for LLM and AI agent integration:
 
 ## LLM Service Architecture
-- **Abstraction Layer**: Use LLM service abstractions in [app/core/llm/](mdc:{{cookiecutter.project_slug}}/backend/app/core/llm/)
-- **Multi-Provider Support**: Support OpenRouter, OpenAI, Anthropic via factory pattern
+
+### LangChain with OpenRouter
+This project uses **LangChain** as the primary LLM framework, integrated with **OpenRouter** for unified access to 500+ language models.
+
+- **Framework**: LangChain provides the abstraction layer for LLM interactions
+- **Provider**: OpenRouter provides unified access to multiple model providers (OpenAI, Anthropic, Google, etc.)
+- **Implementation**: Use `langchain_openai.ChatOpenAI` configured with OpenRouter's base URL
+- **Abstraction Layer**: LLM service abstractions in [app/infrastructure/llm_provider.py](mdc:{{cookiecutter.project_slug}}/backend/app/infrastructure/llm_provider.py)
 - **Error Handling**: Implement robust error handling for external API failures
 - **Rate Limiting**: Implement rate limiting to respect provider limits
+
+### OpenRouterProvider Usage
+```python
+from app.infrastructure.llm_provider import OpenRouterProvider
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+# Initialize provider
+provider = OpenRouterProvider()
+
+# Get LangChain LLM instance configured for OpenRouter
+llm = provider.get_llm(
+    model_name="openai/gpt-4o-mini",  # Any OpenRouter model
+    temperature=0.7
+)
+
+# Create LangChain chain
+prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are a helpful assistant."),
+    ("user", "{input}")
+])
+
+chain = prompt | llm | StrOutputParser()
+
+# Invoke chain
+response = chain.invoke({"input": "Hello!"})
+```
+
+### Key Patterns
+- **Use OpenRouterProvider**: Always use `OpenRouterProvider` to get LLM instances, not direct LangChain initialization
+- **Model Names**: Use OpenRouter model format (e.g., `"openai/gpt-4o-mini"`, `"anthropic/claude-3-sonnet"`)
+- **LangChain Chains**: Build chains using LangChain's pipe operator (`|`) for composability
+- **Prompt Templates**: Use `ChatPromptTemplate` for structured prompts
+- **Output Parsers**: Use appropriate output parsers (`StrOutputParser`, `JsonOutputParser`, etc.)
 
 ## Memory Management
 - **Memory Types**: Support in-memory, Redis, and vector database memory
@@ -39,31 +79,76 @@ class MemoryManager:
 ## Chat Service Patterns
 
 ### Chat Service Implementation
-
-
 ```python
+from app.infrastructure.llm_provider import OpenRouterProvider
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
 class ChatService:
-    def __init__(self, llm_service, memory_store, settings):
-        self.llm_service = llm_service
+    def __init__(self, memory_store, settings):
+        self.provider = OpenRouterProvider()
         self.memory_store = memory_store
         self.settings = settings
 
     async def process_message(self, message: str, session_id: str, user_id: str = None):
-        # Get conversation context
+        # Get conversation context from memory
         context = await self._get_conversation_context(session_id)
 
-        # Generate response using LLM
-        response = await self._generate_response(message, context)
+        # Get LLM instance
+        llm = self.provider.get_llm(
+            model_name=self.settings.default_model,
+            temperature=0.7
+        )
+
+        # Create LangChain chain with context
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", "You are a helpful assistant."),
+            *context,  # Include conversation history
+            ("user", "{input}")
+        ])
+
+        chain = prompt | llm | StrOutputParser()
+
+        # Generate response
+        response = await chain.ainvoke({"input": message})
 
         # Store conversation
         await self._store_conversation(session_id, message, response)
 
         return {
-            "message": response["content"],
+            "message": response,
             "session_id": session_id,
             "message_id": generate_id(),
-            "metadata": response.get("metadata", {})
         }
+```
+
+## LangChain Tools & Agents
+
+### Using LangChain Tools
+```python
+from app.infrastructure.llm_provider import OpenRouterProvider
+from app.agents.tool.context_manager import count_history_items, get_recent_items
+
+provider = OpenRouterProvider()
+llm = provider.get_llm(model_name="openai/gpt-4o-mini")
+
+# Bind tools to LLM
+llm_with_tools = llm.bind_tools([count_history_items, get_recent_items])
+
+# LLM can now use these tools
+response = llm_with_tools.invoke("Count items in my history")
+```
+
+### Using LangChain Agents
+```python
+from app.agents.agents.context_manager import ContextManagerAgent
+from app.infrastructure.llm_provider import OpenRouterProvider
+
+provider = OpenRouterProvider()
+agent = ContextManagerAgent(provider, model_name="openai/gpt-4o-mini")
+
+# Use agent for context management
+result = agent.check_context(request)
 ```
 
 ## Vector Database Integration
@@ -100,27 +185,37 @@ def create_pinecone_client(settings):
 
 ### OpenRouter Integration
 ```python
-# Use OpenRouter for access to multiple models
-OPENROUTER_CONFIG = {
-    "base_url": "https://openrouter.ai/api/v1",
-    "api_key": settings.get_secret("openrouter_api_key"),
-    "default_model": "anthropic/claude-3-sonnet:beta",  # Use Anthropic Sonnet 4
-    "site_url": settings.site_url,  # For referrer tracking
-    "app_name": settings.app_name
-}
+from app.infrastructure.llm_provider import OpenRouterProvider
+
+# Initialize provider (reads OPENROUTER_API_KEY from settings)
+provider = OpenRouterProvider()
+
+# Get LLM instance for any OpenRouter model
+llm = provider.get_llm(
+    model_name="openai/gpt-4o-mini",  # or "anthropic/claude-3-sonnet", etc.
+    temperature=0.7,
+    callbacks=[...]  # Optional LangChain callbacks
+)
+
+# The provider automatically:
+# - Sets base_url to OpenRouter API
+# - Uses your OpenRouter API key
+# - Supports all 500+ models available on OpenRouter
 ```
 
 ### Model Selection Guidelines
-- **Fast Responses**: Use GPT-4.1 mini or nano for quick responses
-- **Complex Reasoning**: Use GPT-4.1 or Anthropic Sonnet 4 for complex tasks
+- **Fast Responses**: Use `"openai/gpt-4o-mini"` or `"openai/gpt-4o"` for quick responses
+- **Complex Reasoning**: Use `"anthropic/claude-3-sonnet"` or `"openai/gpt-4"` for complex tasks
 - **Code Generation**: Use specialized code models when available
 - **Cost Optimization**: Balance model capability with cost requirements
+- **Model Format**: Always use OpenRouter format: `"provider/model-name"`
 
 ## Error Handling & Resilience
 
-### Retry Logic
+### Retry Logic with LangChain
 ```python
 from tenacity import retry, stop_after_attempt, wait_exponential
+from app.infrastructure.llm_provider import OpenRouterProvider
 
 @retry(
     stop=stop_after_attempt(3),
@@ -128,10 +223,9 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 )
 async def call_llm_with_retry(prompt: str, model: str):
     try:
-        response = await llm_client.generate_completion(
-            messages=[{"role": "user", "content": prompt}],
-            model=model
-        )
+        provider = OpenRouterProvider()
+        llm = provider.get_llm(model_name=model)
+        response = await llm.ainvoke(prompt)
         return response
     except Exception as e:
         logger.warning(f"LLM call failed: {e}")
@@ -146,27 +240,34 @@ async def call_llm_with_retry(prompt: str, model: str):
 
 ## Prompt Engineering
 
-### Prompt Templates
+### LangChain Prompt Templates
 ```python
+from langchain_core.prompts import ChatPromptTemplate
+
 SYSTEM_PROMPTS = {
-    "helpful_assistant": """You are a helpful, harmless, and honest AI assistant.
-    Provide accurate and helpful responses while being concise and clear.""",
+    "helpful_assistant": ChatPromptTemplate.from_messages([
+        ("system", "You are a helpful, harmless, and honest AI assistant. Provide accurate and helpful responses while being concise and clear."),
+        ("user", "{input}")
+    ]),
 
-    "code_assistant": """You are an expert software developer.
-    Provide high-quality code solutions with explanations.
-    Follow best practices and include error handling.""",
+    "code_assistant": ChatPromptTemplate.from_messages([
+        ("system", "You are an expert software developer. Provide high-quality code solutions with explanations. Follow best practices and include error handling."),
+        ("user", "{input}")
+    ]),
 
-    "customer_support": """You are a customer support agent.
-    Be empathetic, professional, and solution-oriented.
-    Escalate complex issues when necessary."""
+    "customer_support": ChatPromptTemplate.from_messages([
+        ("system", "You are a customer support agent. Be empathetic, professional, and solution-oriented. Escalate complex issues when necessary."),
+        ("user", "{input}")
+    ])
 }
 ```
 
 ### Context Management
-- **Context Limits**: Respect model context window limits
+- **Context Limits**: Respect model context window limits (use `get_model_limits()` utility)
 - **Context Compression**: Summarize older messages when needed
 - **Relevance Filtering**: Include only relevant conversation history
 - **Metadata Preservation**: Maintain important conversation metadata
+- **Token Counting**: Use `count_tokens_llm()` utility to track token usage
 
 ## Security & Privacy
 
@@ -177,26 +278,30 @@ SYSTEM_PROMPTS = {
 - **Output Filtering**: Filter potentially harmful LLM responses
 
 ### API Key Management
-- **Secret Storage**: Store API keys in secure secret management
+- **Secret Storage**: Store API keys in secure secret management (environment variables)
 - **Rotation**: Implement API key rotation procedures
-- **Monitoring**: Monitor API usage and costs
+- **Monitoring**: Monitor API usage and costs via OpenRouter dashboard
 - **Rate Limiting**: Implement usage limits per user/session
 
 ## Monitoring & Observability
 
 ### LLM Metrics
 - **Response Times**: Track latency for different models
-- **Token Usage**: Monitor input/output token consumption
+- **Token Usage**: Monitor input/output token consumption (use `count_tokens_llm()`)
 - **Success Rates**: Track API success/failure rates
-- **Cost Tracking**: Monitor costs per request and per user
+- **Cost Tracking**: Monitor costs per request and per user via OpenRouter
 
 ### Logging
 ```python
+from app.utils.logging import get_logger
+
+logger = get_logger("llm_service")
+
 logger.info(
     "LLM request completed",
     extra={
         "model": model_name,
-        "tokens_used": response["usage"]["total_tokens"],
+        "tokens_used": token_count,
         "response_time": response_time,
         "user_id": user_id,
         "session_id": session_id
@@ -208,22 +313,18 @@ logger.info(
 
 ### Mock LLM Services
 ```python
+from unittest.mock import Mock, AsyncMock
+from langchain_core.messages import AIMessage
+
 class MockLLMService:
     def __init__(self, responses: List[str] = None):
         self.responses = responses or ["Mock response"]
         self.call_count = 0
 
-    async def generate_completion(self, messages: list, **kwargs):
+    async def ainvoke(self, prompt, **kwargs):
         response = self.responses[self.call_count % len(self.responses)]
         self.call_count += 1
-
-        return {
-            "choices": [{
-                "message": {"role": "assistant", "content": response},
-                "finish_reason": "stop"
-            }],
-            "usage": {"total_tokens": 100}
-        }
+        return AIMessage(content=response)
 ```
 
 ### Integration Testing
@@ -231,3 +332,4 @@ class MockLLMService:
 - **Response Validation**: Test response format validation
 - **Error Scenarios**: Test various API failure scenarios
 - **Performance Testing**: Test with realistic token loads
+- **Chain Testing**: Test LangChain chains end-to-end with mocked LLMs

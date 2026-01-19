@@ -97,19 +97,19 @@ python -m app.cli.main --help
 ### LLM Management
 
 ```bash
-# List available providers and models
+# List available models from OpenRouter
 {{cookiecutter.project_slug}} llm list
 
-# Test LLM connections
-{{cookiecutter.project_slug}} llm test --provider openai
+# Test OpenRouter connection
+{{cookiecutter.project_slug}} llm test
 
 # Interactive chat
-{{cookiecutter.project_slug}} llm chat --model gpt-4
+{{cookiecutter.project_slug}} llm chat --model openai/gpt-4o-mini
 
 # Single completion
-{{cookiecutter.project_slug}} llm complete "Hello, world!"
+{{cookiecutter.project_slug}} llm complete "Hello, world!" --model openai/gpt-4o-mini
 
-# Configure providers
+# Configure OpenRouter API key
 {{cookiecutter.project_slug}} llm config
 ```
 

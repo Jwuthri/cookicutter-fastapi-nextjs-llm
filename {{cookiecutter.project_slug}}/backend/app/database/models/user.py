@@ -8,7 +8,7 @@ from datetime import datetime
 
 from sqlalchemy import JSON, Boolean, Column, DateTime
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import Integer, String
+from sqlalchemy import String
 
 from ..base import Base
 
@@ -25,12 +25,17 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    clerk_id = Column(String(255), unique=True, index=True, nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=True)
     username = Column(String(100), unique=True, index=True, nullable=True)
     full_name = Column(String(255), nullable=True)
-    hashed_password = Column(String(255), nullable=True)
     status = Column(SQLEnum(UserStatusEnum), default=UserStatusEnum.ACTIVE)
     is_superuser = Column(Boolean, default=False)
+    
+    @property
+    def is_active(self) -> bool:
+        """Check if user is active based on status."""
+        return self.status == UserStatusEnum.ACTIVE
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -41,11 +46,7 @@ class User(Base):
     preferences = Column(JSON, default={})
     extra_metadata = Column(JSON, default={})
 
-    # API usage tracking
-    total_requests = Column(Integer, default=0)
-    total_tokens_used = Column(Integer, default=0)
-
     # Relationships (none for now)
 
     def __repr__(self):
-        return f"<User(id={self.id}, email={self.email}, status={self.status})>"
+        return f"<User(id={self.id}, clerk_id={self.clerk_id}, email={self.email}, status={self.status})>"

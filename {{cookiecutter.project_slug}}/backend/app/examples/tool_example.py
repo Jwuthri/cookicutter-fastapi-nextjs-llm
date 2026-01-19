@@ -7,11 +7,9 @@ This example demonstrates:
 3. Using tools in agent workflows
 """
 
-from langchain_core.messages import HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 
 from app.agents.tool.context_manager import (
-    summarize_history,
     count_history_items,
     get_recent_items,
     estimate_tokens,
