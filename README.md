@@ -1,13 +1,12 @@
-# 🍪 Cookiecutter FastAPI + Next.js + Agno + OpenRouter
+# 🍪 Cookiecutter FastAPI + Next.js + OpenRouter
 
 > **Modern AI Agent Application Template** - Generate production-ready AI agent apps in seconds!
 
-A powerful [Cookiecutter](https://cookiecutter.readthedocs.io/) template for creating modern AI agent applications with **FastAPI**, **Next.js**, **Agno framework**, and **OpenRouter** for unified access to 500+ language models.
+A powerful [Cookiecutter](https://cookiecutter.readthedocs.io/) template for creating modern AI agent applications with **FastAPI**, **Next.js**, and **OpenRouter** for unified access to 500+ language models.
 
 [![Cookiecutter](https://img.shields.io/badge/cookiecutter-template-D4AA00?style=flat&logo=cookiecutter)](https://github.com/cookiecutter/cookiecutter)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-00a393?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
 [![Next.js](https://img.shields.io/badge/Next.js-14+-black?style=flat&logo=next.js)](https://nextjs.org)
-[![Agno](https://img.shields.io/badge/Agno-2.0+-blue?style=flat)](https://docs.agno.com)
 [![OpenRouter](https://img.shields.io/badge/OpenRouter-500%2B%20models-green?style=flat)](https://openrouter.ai)
 
 ---
@@ -17,9 +16,8 @@ A powerful [Cookiecutter](https://cookiecutter.readthedocs.io/) template for cre
 This cookiecutter template generates a complete, production-ready AI agent application with:
 
 ### 🤖 **AI Agent Capabilities**
-- **[Agno Framework](https://docs.agno.com)** - Advanced AI agents with memory, tools, and workflows
 - **[OpenRouter](https://openrouter.ai)** - Unified access to 500+ models (GPT-5, Claude 3.7, Gemini 2.5 Pro, etc.)
-- **Multi-Agent Systems** - Single agents, multi-agent teams, or step-based workflows
+- **AI Chat Systems** - Single agents, multi-agent teams, or step-based workflows
 - **Built-in Memory** - Vector databases with semantic search + Redis for fast access
 
 ### 🏗️ **Modern Architecture**
@@ -72,8 +70,6 @@ use_websockets [yes]:
 include_database [postgresql]:
 default_model [gpt-4]: gpt-5
 vector_database [pinecone]:
-use_agno_agents [yes]:
-agent_type [single]: multi-agent
 memory_type [hybrid]:
 frontend_port [3000]:
 backend_port [8000]:
@@ -98,8 +94,6 @@ docker-compose up -d
 | `description` | Project description | Any string |
 | `default_model` | Default AI model | `gpt-4`, `claude-3-5-sonnet`, `gemini-2.5-pro`, `gpt-5`, `custom` |
 | `vector_database` | Vector DB for AI memory | `pinecone`, `weaviate`, `qdrant`, `chromadb`, `none` |
-| `use_agno_agents` | Enable Agno agent framework | `yes`, `no` |
-| `agent_type` | Type of agent system | `single`, `multi-agent`, `workflow` |
 | `memory_type` | Memory system type | `vector`, `redis`, `hybrid`, `in-memory` |
 | `use_websockets` | Enable WebSocket support | `yes`, `no` |
 | `include_database` | Database backend | `postgresql`, `sqlite`, `none` |
@@ -146,7 +140,7 @@ your-ai-agent-app/
 │   ├── 📁 app/
 │   │   ├── 📁 api/v1/         # API routes (chat, completions, health)
 │   │   ├── 📁 core/           # Core business logic
-│   │   │   ├── 📁 llm/        # Agno + OpenRouter integration
+│   │   │   ├── 📁 llm/        # OpenRouter integration
 │   │   │   ├── 📁 memory/     # Vector & Redis memory systems
 │   │   │   └── 📁 security/   # Authentication & rate limiting
 │   │   ├── 📁 models/         # Pydantic data models
@@ -186,7 +180,7 @@ your-ai-agent-app/
 1. **Set up API keys** in `backend/.env`
 2. **Choose your AI models** (GPT-5, Claude 3.7, Gemini 2.5 Pro, etc.)
 3. **Configure vector database** (Pinecone, Weaviate, Qdrant, ChromaDB)
-4. **Customize agent behavior** in the Agno configuration
+4. **Customize agent behavior** in the LLM configuration
 5. **Design your chat interface** in the Next.js frontend
 
 ### **Key Files to Customize**
@@ -296,14 +290,12 @@ docker-compose up -d
 ## 📚 **Resources**
 
 ### **Documentation**
-- [Agno Framework Docs](https://docs.agno.com) - AI agent framework
 - [OpenRouter API](https://openrouter.ai/docs) - Model access documentation
 - [FastAPI Docs](https://fastapi.tiangolo.com) - Backend framework
 - [Next.js Docs](https://nextjs.org/docs) - Frontend framework
 - [uv Documentation](https://docs.astral.sh/uv/) - Python package manager
 
 ### **Tutorials**
-- [Building AI Agents with Agno](https://docs.agno.com/examples)
 - [OpenRouter Model Comparison](https://openrouter.ai/models)
 - [Vector Database Guide](https://example.com) - Choosing the right vector DB
 - [Production Deployment Guide](https://example.com) - Deploy your AI app
@@ -326,7 +318,6 @@ This template is licensed under the MIT License - see the [LICENSE](LICENSE) fil
 
 ## 🙏 **Acknowledgments**
 
-- **[Agno](https://docs.agno.com)** - Powerful AI agent framework
 - **[OpenRouter](https://openrouter.ai)** - Unified model access
 - **[Cookiecutter](https://cookiecutter.readthedocs.io/)** - Project templating
 - **[FastAPI](https://fastapi.tiangolo.com)** - Modern Python web framework

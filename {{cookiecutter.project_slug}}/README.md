@@ -1,12 +1,11 @@
 # {{cookiecutter.project_name}}
 
-> 🤖 **Modern AI Agent Application** built with **FastAPI** + **Next.js** + **Agno** + **OpenRouter**
+> 🤖 **Modern AI Agent Application** built with **FastAPI** + **Next.js** + **OpenRouter**
 
-A production-ready AI agent application featuring unified access to 500+ language models, vector memory, and powerful agent capabilities through the Agno framework.
+A production-ready AI agent application featuring unified access to 500+ language models, vector memory, and powerful agent capabilities.
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-00a393?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
 [![Next.js](https://img.shields.io/badge/Next.js-14+-black?style=flat&logo=next.js)](https://nextjs.org)
-[![Agno](https://img.shields.io/badge/Agno-2.0+-blue?style=flat)](https://docs.agno.com)
 [![OpenRouter](https://img.shields.io/badge/OpenRouter-500%2B%20models-green?style=flat)](https://openrouter.ai)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5+-3178c6?style=flat&logo=typescript)](https://www.typescriptlang.org)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ed?style=flat&logo=docker)](https://www.docker.com)
@@ -17,7 +16,7 @@ A production-ready AI agent application featuring unified access to 500+ languag
 
 ### 🧠 **AI Agent Capabilities**
 - **500+ Models** via [OpenRouter](https://openrouter.ai) (GPT-5, Claude 3.7, Gemini 2.5 Pro, Llama 3.3, etc.)
-- **[Agno Framework](https://docs.agno.com)** for advanced AI agents with memory, tools, and workflows
+- **AI Chat Systems** with memory, tools, and workflows
 - **Multi-Agent Systems** and **Workflow Management**
 - **Built-in Agent Memory** with conversation context
 - **Tool Integration** and **Function Calling**
@@ -51,12 +50,12 @@ A production-ready AI agent application featuring unified access to 500+ languag
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Next.js       │────│   FastAPI       │────│   Agno Agent    │
-│   Frontend      │    │   Backend       │    │   Framework     │
+│   Next.js       │────│   FastAPI       │────│   OpenRouter    │
+│   Frontend      │    │   Backend       │    │   LLM Service   │
 │                 │    │                 │    │                 │
-│ • TypeScript    │    │ • Python 3.11+ │    │ • OpenRouter    │
-│ • Tailwind CSS  │    │ • Async/Await   │    │ • 500+ Models   │
-│ • WebSocket     │    │ • Pydantic      │    │ • Memory        │
+│ • TypeScript    │    │ • Python 3.11+ │    │ • 500+ Models   │
+│ • Tailwind CSS  │    │ • Async/Await   │    │ • Memory        │
+│ • WebSocket     │    │ • Pydantic      │    │ • Tools         │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          └───────────────────────┼───────────────────────┘
@@ -158,10 +157,6 @@ Choose from 500+ models available through OpenRouter:
 ```
 
 ### **Agent Types**
-{% if cookiecutter.use_agno_agents == "yes" %}
-**Current Setup**: {{cookiecutter.agent_type}}
-{% endif %}
-
 - **Single Agent**: One AI agent handling all conversations
 - **Multi-Agent**: Multiple specialized agents working together
 - **Workflow**: Step-by-step agent workflows for complex tasks
@@ -272,11 +267,9 @@ POST /api/v1/tasks/notifications
 
 ### **Backend Settings** (`backend/.env`)
 ```bash
-# Agno + OpenRouter
+# OpenRouter
 OPENROUTER_API_KEY=your_key_here
 DEFAULT_MODEL={{cookiecutter.default_model}}
-USE_AGNO_AGENTS={{cookiecutter.use_agno_agents}}
-AGENT_TYPE={{cookiecutter.agent_type}}
 
 # Vector Database
 VECTOR_DATABASE={{cookiecutter.vector_database}}
@@ -374,7 +367,7 @@ npm start
 │   ├── 📁 app/
 │   │   ├── 📁 api/v1/         # API routes
 │   │   ├── 📁 core/           # Core business logic
-│   │   │   ├── 📁 llm/        # Agno + OpenRouter integration
+│   │   │   ├── 📁 llm/        # OpenRouter integration
 │   │   │   ├── 📁 memory/     # Vector & Redis memory
 │   │   │   └── 📁 security/   # Auth & rate limiting
 │   │   ├── 📁 models/         # Pydantic models
@@ -496,7 +489,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 **Acknowledgments**
 
-- **[Agno](https://docs.agno.com)** - Powerful AI agent framework
 - **[OpenRouter](https://openrouter.ai)** - Unified access to 500+ AI models
 - **[FastAPI](https://fastapi.tiangolo.com)** - Modern Python web framework
 - **[Next.js](https://nextjs.org)** - React framework for production
@@ -519,6 +511,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using the latest AI technologies**
 
-[🤖 Agno](https://docs.agno.com) • [🔀 OpenRouter](https://openrouter.ai) • [⚡ FastAPI](https://fastapi.tiangolo.com) • [⚛️ Next.js](https://nextjs.org)
+[🔀 OpenRouter](https://openrouter.ai) • [⚡ FastAPI](https://fastapi.tiangolo.com) • [⚛️ Next.js](https://nextjs.org)
 
 </div>

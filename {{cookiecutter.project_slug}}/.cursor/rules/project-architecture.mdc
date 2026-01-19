@@ -70,7 +70,7 @@ The project follows a monorepo structure with clear separation:
 - Comprehensive test coverage with pytest
 
 ## LLM Integration
-- Agno AI agent framework support
+
 - Multiple LLM provider support (OpenRouter, OpenAI, Anthropic)
 - Vector database integration for memory
 - Chat service abstraction with multiple implementations

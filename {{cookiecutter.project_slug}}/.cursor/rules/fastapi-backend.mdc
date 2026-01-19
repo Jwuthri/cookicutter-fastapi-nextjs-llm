@@ -116,7 +116,7 @@ result = await get_cqrs_bus().execute_query(GetChatHistoryQuery(...))
 - Use the LLM service abstraction in [app/core/llm/](mdc:{{cookiecutter.project_slug}}/backend/app/core/llm/)
 - Support multiple LLM providers through factory pattern
 - Implement proper error handling for external API calls
-- Use Agno agents when configured
+
 
 ## Security
 - Validate all inputs using Pydantic models

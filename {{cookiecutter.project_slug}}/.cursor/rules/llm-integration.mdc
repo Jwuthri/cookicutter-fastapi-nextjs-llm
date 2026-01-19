@@ -12,33 +12,7 @@ Follow these patterns for LLM and AI agent integration:
 - **Error Handling**: Implement robust error handling for external API failures
 - **Rate Limiting**: Implement rate limiting to respect provider limits
 
-## Agno AI Agent Framework
-When using Agno agents, follow these patterns:
-
-### Agent Configuration
-```python
-from agno import Agent, AgentTeam
-from app.core.memory import get_memory_store
-
-# Single agent configuration
-agent = Agent(
-    model=settings.default_model,
-    memory=get_memory_store(),
-    instructions="You are a helpful assistant...",
-    structured_outputs=settings.structured_outputs
-)
-
-# Team-based agents for complex workflows
-team = AgentTeam(
-    name="Customer Support Team",
-    agents=[
-        Agent(name="Analyst", model="gpt-4", instructions="Analyze customer issues"),
-        Agent(name="Resolver", model="gpt-4-turbo", instructions="Provide solutions")
-    ]
-)
-```
-
-### Memory Management
+## Memory Management
 - **Memory Types**: Support in-memory, Redis, and vector database memory
 - **Memory Configuration**: Configure via [app/core/memory/](mdc:{{cookiecutter.project_slug}}/backend/app/core/memory/)
 - **Persistence**: Use persistent memory for important conversations
@@ -46,8 +20,8 @@ team = AgentTeam(
 
 Example memory configuration:
 ```python
-# app/core/memory/agno_memory.py
-class AgnoMemoryManager:
+# app/core/memory/memory_manager.py
+class MemoryManager:
     def __init__(self, settings: Settings):
         if settings.memory_type == "vector":
             self.memory = VectorMemory(
@@ -64,28 +38,11 @@ class AgnoMemoryManager:
 
 ## Chat Service Patterns
 
-### Service Factory
-Use the chat service factory for flexible chat implementations:
+### Chat Service Implementation
+
+
 ```python
-from app.services.chat_service_factory import ChatServiceFactory, ChatServiceType
-
-# Auto-detection (tries Agno first, falls back to custom)
-chat_service = await ChatServiceFactory.create_chat_service(
-    settings=settings,
-    service_type=ChatServiceType.AUTO
-)
-
-# Explicit Agno usage
-chat_service = await ChatServiceFactory.create_chat_service(
-    settings=settings,
-    service_type=ChatServiceType.AGNO
-)
-```
-
-### Custom Chat Service Implementation
-For custom implementations without Agno:
-```python
-class CustomChatService:
+class ChatService:
     def __init__(self, llm_service, memory_store, settings):
         self.llm_service = llm_service
         self.memory_store = memory_store
