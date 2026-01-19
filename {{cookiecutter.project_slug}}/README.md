@@ -1,8 +1,8 @@
 # {{cookiecutter.project_name}}
 
-> 🤖 **Modern AI Agent Application** built with **FastAPI** + **Next.js** + **OpenRouter**
+> 🤖 **Modern AI Chat Application** built with **FastAPI** + **Next.js** + **OpenRouter** + **Clerk**
 
-A production-ready AI agent application featuring unified access to 500+ language models, vector memory, and powerful agent capabilities.
+A simple, production-ready AI chat application featuring unified access to 500+ language models via OpenRouter, Clerk authentication, and a terminal-style interface.
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-00a393?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
 [![Next.js](https://img.shields.io/badge/Next.js-14+-black?style=flat&logo=next.js)](https://nextjs.org)
@@ -14,34 +14,27 @@ A production-ready AI agent application featuring unified access to 500+ languag
 
 ## 🌟 **Features**
 
-### 🧠 **AI Agent Capabilities**
+### 🧠 **AI Capabilities**
 - **500+ Models** via [OpenRouter](https://openrouter.ai) (GPT-5, Claude 3.7, Gemini 2.5 Pro, Llama 3.3, etc.)
-- **AI Chat Systems** with memory, tools, and workflows
-- **Multi-Agent Systems** and **Workflow Management**
-- **Built-in Agent Memory** with conversation context
-- **Tool Integration** and **Function Calling**
+- **LangChain Integration** for LLM interactions
+- **Simple Q&A Interface** - Terminal-style chat UI
+- **Stateless Conversations** - No session storage, reload resets
 
-### 💾 **Advanced Memory Systems**
-{% if cookiecutter.vector_database != "none" %}
-- **Vector Database**: {{cookiecutter.vector_database.title()}} for semantic search and long-term memory
-{% endif %}
-- **Redis** for fast session storage and caching
-- **Hybrid Memory** combining vector search with Redis performance
-- **Semantic Search** across conversation history
+### 🔐 **Authentication**
+- **Clerk Integration** - Google OAuth authentication
+- **JWT Token Validation** - Secure API access
+- **User Profile Management** - Clerk-based user system
 
 ### 🚀 **Production-Ready Architecture**
 - **FastAPI Backend** with async/await support
 - **Next.js Frontend** with App Router and TypeScript
-- **WebSocket Support** for real-time communication
-- **Background Task Processing** with Celery workers and Redis
 - **Docker Compose** setup for development and production
-- **Microservices Ready** with Redis, Kafka, RabbitMQ support
+- **Health Checks** and monitoring endpoints
 
 ### 🔧 **Developer Experience**
 - **`uv`** for ultra-fast Python dependency management
 - **Hot Reload** in development
-- **Comprehensive Logging** with Loguru
-- **Health Checks** and monitoring endpoints
+- **Comprehensive Logging** with structured logging
 - **Type Safety** with Pydantic and TypeScript
 
 ---
@@ -54,18 +47,18 @@ A production-ready AI agent application featuring unified access to 500+ languag
 │   Frontend      │    │   Backend       │    │   LLM Service   │
 │                 │    │                 │    │                 │
 │ • TypeScript    │    │ • Python 3.11+ │    │ • 500+ Models   │
-│ • Tailwind CSS  │    │ • Async/Await   │    │ • Memory        │
-│ • WebSocket     │    │ • Pydantic      │    │ • Tools         │
+│ • Tailwind CSS  │    │ • Async/Await   │    │ • LangChain     │
+│ • Clerk Auth    │    │ • Pydantic      │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
+         │                       │
          └───────────────────────┼───────────────────────┘
                                  │
-    ┌────────────────────────────┴────────────────────────────┐
-    │                                                         │
-┌───▼────┐ ┌────────┐ ┌────────┐ ┌─────────────┐ ┌──────────┐
-│ Redis  │ │ Kafka  │ │RabbitMQ│ │{{cookiecutter.vector_database.title()}} Vector│ │PostgreSQL│
-│ Cache  │ │Streams │ │ Queue  │ │  Database   │ │ Database │
-└────────┘ └────────┘ └────────┘ └─────────────┘ └──────────┘
+                    ┌─────────────▼─────────────┐
+                    │                         │
+            ┌───────▼──────┐         ┌───────▼──────┐
+            │ PostgreSQL/  │         │   Clerk      │
+            │ SQLite       │         │   Auth       │
+            └──────────────┘         └──────────────┘
 ```
 
 ---
@@ -80,7 +73,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # Install Node.js 18+
 # https://nodejs.org/
 
-# Install Docker & Docker Compose
+# Install Docker & Docker Compose (optional)
 # https://docs.docker.com/get-docker/
 ```
 
@@ -88,26 +81,24 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```bash
 # Copy environment files
 cp backend/.env.template backend/.env
-cp frontend/.env.template frontend/.env
+cp frontend/.env.template frontend/.env.local
 
 # Set your API keys in backend/.env
 OPENROUTER_API_KEY=your_openrouter_key_here
-{% if cookiecutter.vector_database == "pinecone" %}
-PINECONE_API_KEY=your_pinecone_key_here
-{% elif cookiecutter.vector_database == "weaviate" %}
-WEAVIATE_API_KEY=your_weaviate_key_here
-{% elif cookiecutter.vector_database == "qdrant" %}
-QDRANT_API_KEY=your_qdrant_key_here
-{% endif %}
+
+# Set Clerk keys
+CLERK_SECRET_KEY=sk_test_your_clerk_secret_key
+CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_publishable_key
+
+# Set Clerk publishable key in frontend/.env.local
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_publishable_key
+NEXT_PUBLIC_API_URL=http://localhost:{{cookiecutter.backend_port}}
 ```
 
 ### 3. **Start with Docker Compose** ⚡
 ```bash
 # Start all services (recommended for first run)
 docker-compose up -d
-
-# Or use the development setup
-docker-compose -f docker-compose.dev.yml up -d
 ```
 
 ### 4. **Manual Development Setup** 🛠️
@@ -117,7 +108,6 @@ cd backend
 uv venv
 source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
 uv pip install -e .
-uv pip list
 uvicorn app.main:app --reload --host 0.0.0.0 --port {{cookiecutter.backend_port}}
 
 # Frontend (in another terminal)
@@ -126,7 +116,7 @@ npm install
 npm run dev
 ```
 
-### 5. **Access Your AI Agent App** 🎉
+### 5. **Access Your Application** 🎉
 - **Frontend**: http://localhost:{{cookiecutter.frontend_port}}
 - **Backend API**: http://localhost:{{cookiecutter.backend_port}}
 - **API Docs**: http://localhost:{{cookiecutter.backend_port}}/docs
@@ -134,9 +124,8 @@ npm run dev
 
 ---
 
-## 🤖 **AI Agent Configuration**
+## 🤖 **AI Model Selection**
 
-### **Model Selection**
 Choose from 500+ models available through OpenRouter:
 
 ```python
@@ -151,114 +140,75 @@ Choose from 500+ models available through OpenRouter:
 "google/gemini-1.5-pro"          # Excellent context window
 
 # Fast and efficient
-"openai/gpt-4o-mini"             # Quick responses
+"openai/gpt-4o-mini"             # Quick responses (default)
 "anthropic/claude-3-haiku"       # Speed optimized
 "google/gemini-1.5-flash"        # Ultra fast
 ```
-
-### **Agent Types**
-- **Single Agent**: One AI agent handling all conversations
-- **Multi-Agent**: Multiple specialized agents working together
-- **Workflow**: Step-by-step agent workflows for complex tasks
-
-### **Memory Configuration**
-{% if cookiecutter.memory_type != "in-memory" %}
-**Current Setup**: {{cookiecutter.memory_type}} with {{cookiecutter.vector_database}}
-{% endif %}
-
-- **Vector Memory**: Semantic search across conversation history
-- **Redis**: Fast session-based memory
-- **Hybrid**: Best of both vector search and Redis speed
-- **In-Memory**: Development and testing
 
 ---
 
 ## 📚 **API Endpoints**
 
-### **Chat & Agents**
+### **Authentication (Clerk)**
 ```bash
-# Start a conversation with an AI agent
+# Get current user profile (requires auth)
+GET /api/v1/auth/me
+
+# Check authentication status (optional auth)
+GET /api/v1/auth/status
+
+# Get Clerk configuration for frontend
+GET /api/v1/auth/config
+
+# Get user by ID (requires auth)
+GET /api/v1/auth/user/{user_id}
+
+# Validate JWT token (requires auth)
+POST /api/v1/auth/validate
+
+# Check Clerk configuration status
+GET /api/v1/auth/check-config
+
+# Example protected route (requires auth)
+GET /api/v1/auth/protected
+
+# Authentication health check
+GET /api/v1/auth/health
+```
+
+### **Chat**
+```bash
+# Send a message to the LLM (requires auth)
 POST /api/v1/chat
 {
-  "message": "Help me plan a web application",
-  "session_id": "uuid-here",
-  "model": "gpt-5"  # optional
+  "message": "Explain quantum computing",
+  "model": "openai/gpt-4o-mini",  # optional
+  "temperature": 0.7              # optional
 }
 
-# Stream agent responses
-POST /api/v1/chat/stream
-
-# Get conversation history
-GET /api/v1/chat/sessions/{session_id}
-
-# List all sessions
-GET /api/v1/chat/sessions
-```
-
-### **Agent Management**
-```bash
-# Get available models
-GET /api/v1/models
-
-# Switch agent model
-POST /api/v1/agent/model
+# Response
 {
-  "model": "anthropic/claude-3.7-sonnet"
-}
-
-# Update agent instructions
-POST /api/v1/agent/instructions
-{
-  "instructions": "You are a helpful coding assistant..."
+  "response": "Quantum computing is...",
+  "model_used": "openai/gpt-4o-mini"
 }
 ```
 
-### **Memory & Search**
+### **Health & Metrics**
 ```bash
-# Semantic search across conversations
-POST /api/v1/search
-{
-  "query": "database optimization tips",
-  "session_id": "uuid-here"  # optional
-}
+# Main health check
+GET /api/v1/health/
 
-# Clear conversation memory
-DELETE /api/v1/chat/sessions/{session_id}
-```
+# Readiness probe
+GET /api/v1/health/ready
 
-### **Background Tasks**
-```bash
-# Trigger asynchronous LLM completion
-POST /api/v1/tasks/llm/completion
-{
-  "prompt": "Explain quantum computing",
-  "model": "gpt-4",
-  "delay_seconds": 10
-}
+# Liveness probe
+GET /api/v1/health/live
 
-# Process chat message asynchronously
-POST /api/v1/tasks/chat/process
-{
-  "message": "Hello",
-  "session_id": "uuid-here"
-}
+# Application metrics
+GET /api/v1/metrics/
 
-# Get task status
-GET /api/v1/tasks/{task_id}
-
-# List all active tasks
-GET /api/v1/tasks
-
-# Trigger system health check
-POST /api/v1/tasks/system/health-check
-
-# Send notification
-POST /api/v1/tasks/notifications
-{
-  "recipient": "user@example.com",
-  "message": "Task completed",
-  "notification_type": "success"
-}
+# Metrics summary
+GET /api/v1/metrics/summary
 ```
 
 ---
@@ -267,50 +217,35 @@ POST /api/v1/tasks/notifications
 
 ### **Backend Settings** (`backend/.env`)
 ```bash
-# OpenRouter
-OPENROUTER_API_KEY=your_key_here
-DEFAULT_MODEL={{cookiecutter.default_model}}
+# Database
+DATABASE_URL=sqlite+aiosqlite:///./app.db
 
-# Vector Database
-VECTOR_DATABASE={{cookiecutter.vector_database}}
-{% if cookiecutter.vector_database == "pinecone" %}
-PINECONE_API_KEY=your_pinecone_key
-PINECONE_ENVIRONMENT=gcp-starter
-{% elif cookiecutter.vector_database == "weaviate" %}
-WEAVIATE_URL=http://localhost:8080
-WEAVIATE_API_KEY=your_weaviate_key
-{% elif cookiecutter.vector_database == "qdrant" %}
-QDRANT_URL=http://localhost:6333
-QDRANT_API_KEY=your_qdrant_key
-{% elif cookiecutter.vector_database == "chromadb" %}
-CHROMADB_PATH=./data/chromadb
-{% endif %}
+# API Server
+API_HOST=0.0.0.0
+API_PORT=8000
 
-# Infrastructure
-REDIS_URL=redis://localhost:6379/0
-{% if cookiecutter.include_database != "none" %}
-DATABASE_URL={{cookiecutter.include_database}}://...
-{% endif %}
+# OpenRouter (for LLM)
+OPENROUTER_API_KEY=your-key-here
 
-# WebSockets
-{% if cookiecutter.use_websockets == "yes" %}
-WEBSOCKET_ENABLED=true
-{% else %}
-WEBSOCKET_ENABLED=false
-{% endif %}
+# Clerk Authentication
+CLERK_SECRET_KEY=sk_test_...
+CLERK_PUBLISHABLE_KEY=pk_test_...
 
-# Celery Background Tasks
-CELERY_BROKER_URL=redis://localhost:6379/1
-CELERY_RESULT_BACKEND=redis://localhost:6379/1
-CELERY_TASK_ALWAYS_EAGER=false  # Set to true for testing
+# CORS (comma-separated origins)
+CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+
+# Logging
+LOG_LEVEL=INFO
+DEBUG=false
 ```
 
 ### **Frontend Settings** (`frontend/.env.local`)
 ```bash
+# Backend API URL
 NEXT_PUBLIC_API_URL=http://localhost:{{cookiecutter.backend_port}}
-{% if cookiecutter.use_websockets == "yes" %}
-NEXT_PUBLIC_WS_URL=ws://localhost:{{cookiecutter.backend_port}}/ws
-{% endif %}
+
+# Clerk Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 ```
 
 ---
@@ -321,9 +256,6 @@ NEXT_PUBLIC_WS_URL=ws://localhost:{{cookiecutter.backend_port}}/ws
 ```bash
 # Production build
 docker-compose -f docker-compose.prod.yml up -d
-
-# Or use the deployment script
-./backend/scripts/deploy.sh
 ```
 
 ### **Manual Deployment**
@@ -333,14 +265,6 @@ cd backend
 uv pip install -e .
 gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
 
-# Start Celery workers (in separate terminals)
-celery -A app.core.celery_app:celery_app worker --queues=general --concurrency=2
-celery -A app.core.celery_app:celery_app worker --queues=chat --concurrency=3
-celery -A app.core.celery_app:celery_app worker --queues=llm --concurrency=2
-
-# Optional: Start Celery Flower for monitoring
-celery -A app.core.celery_app:celery_app flower --port=5555
-
 # Frontend
 cd frontend
 npm run build
@@ -348,14 +272,11 @@ npm start
 ```
 
 ### **Environment Variables for Production**
-- Set `ENVIRONMENT=production`
-- Use strong `SECRET_KEY`
+- Set `DEBUG=false`
 - Configure proper `CORS_ORIGINS`
 - Set up SSL/TLS certificates
-- Use managed database services
-{% if cookiecutter.vector_database != "none" %}
-- Configure {{cookiecutter.vector_database}} production instance
-{% endif %}
+- Use managed database services (PostgreSQL recommended)
+- Set production Clerk keys
 
 ---
 
@@ -366,31 +287,31 @@ npm start
 ├── 📁 backend/                 # FastAPI Backend
 │   ├── 📁 app/
 │   │   ├── 📁 api/v1/         # API routes
-│   │   ├── 📁 core/           # Core business logic
-│   │   │   ├── 📁 llm/        # OpenRouter integration
-│   │   │   ├── 📁 memory/     # Vector & Redis memory
-│   │   │   └── 📁 security/   # Auth & rate limiting
-│   │   ├── 📁 models/         # Pydantic models
-│   │   ├── 📁 services/       # Business services
-│   │   ├── 📁 tasks/          # Celery background tasks
+│   │   │   ├── auth.py        # Clerk authentication endpoints
+│   │   │   ├── chat.py        # LLM chat endpoint
+│   │   │   ├── health.py      # Health check endpoints
+│   │   │   └── metrics.py     # Metrics endpoints
+│   │   ├── 📁 agents/         # LangChain agents framework
+│   │   ├── 📁 database/       # Database layer
+│   │   │   ├── models/        # SQLAlchemy models (User)
+│   │   │   └── repositories/ # Data access layer
+│   │   ├── 📁 infrastructure/ # Infrastructure (LLM provider)
+│   │   ├── 📁 models/         # Pydantic API models
+│   │   ├── 📁 security/       # Clerk authentication
 │   │   └── 📁 utils/          # Utilities
 │   ├── 📁 docker/             # Docker configurations
-│   ├── 📁 scripts/            # Deployment scripts
-│   └── 📄 pyproject.toml      # Python dependencies (uv)
+│   └── 📄 pyproject.toml       # Python dependencies (uv)
 │
 ├── 📁 frontend/               # Next.js Frontend
 │   ├── 📁 src/
 │   │   ├── 📁 app/            # Next.js App Router
+│   │   │   └── page.tsx       # Terminal chat interface
 │   │   ├── 📁 components/     # React components
-│   │   │   ├── 📁 ui/         # Base UI components
-│   │   │   └── 📁 chat/       # Chat interface
-│   │   ├── 📁 hooks/          # Custom React hooks
 │   │   ├── 📁 lib/            # Utilities & API client
-│   │   └── 📁 types/          # TypeScript definitions
+│   │   └── 📁 hooks/          # Custom React hooks
 │   └── 📄 package.json       # Node.js dependencies
 │
 ├── 📄 docker-compose.yml     # Development services
-├── 📄 docker-compose.prod.yml # Production setup
 └── 📄 README.md              # This file
 ```
 
@@ -402,21 +323,20 @@ npm start
 ```bash
 # Backend tests
 cd backend
-uv run pytest
+pytest
 
-# Frontend tests
-cd frontend
-npm test
+# Run with coverage
+pytest --cov=app --cov-report=html
 ```
 
 ### **Code Quality**
 ```bash
 # Backend linting & formatting
 cd backend
-uv run black .
-uv run isort .
-uv run ruff check .
-uv run mypy .
+black .
+isort .
+flake8 .
+mypy .
 
 # Frontend linting
 cd frontend
@@ -425,24 +345,19 @@ npm run type-check
 ```
 
 ### **Database Migrations**
-{% if cookiecutter.include_database != "none" %}
 ```bash
 cd backend
-uv run alembic revision --autogenerate -m "Description"
-uv run alembic upgrade head
+alembic revision --autogenerate -m "Description"
+alembic upgrade head
 ```
-{% endif %}
 
 ---
 
 ## 🔍 **Monitoring & Health Checks**
 
-- **Health Check**: `GET /health`
-- **Metrics**: `GET /metrics` (Prometheus format)
-- **Agent Status**: `GET /api/v1/agent/status`
-{% if cookiecutter.vector_database != "none" %}
-- **Vector DB Health**: `GET /api/v1/memory/health`
-{% endif %}
+- **Health Check**: `GET /api/v1/health/`
+- **Metrics**: `GET /api/v1/metrics/`
+- **Auth Health**: `GET /api/v1/auth/health`
 
 ---
 
@@ -465,7 +380,7 @@ pre-commit run --all-files
 The hooks will automatically check:
 - **Python**: Black formatting, autoflake unused import removal, isort import sorting, flake8 linting, mypy type checking
 - **Frontend**: Prettier formatting, ESLint linting
-- **Security**: Secret detection, private key scanning
+- **Security**: Private key scanning
 - **General**: Trailing whitespace, file endings, YAML/JSON validation
 
 ### 🚀 **Contribution Steps**
@@ -474,7 +389,7 @@ The hooks will automatically check:
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. **Setup pre-commit hooks**: `./scripts/setup-pre-commit.sh`
 4. Make your changes
-5. Run tests: `uv run pytest && npm test`
+5. Run tests: `pytest`
 6. Commit: `git commit -m 'Add amazing feature'` (pre-commit hooks will run automatically)
 7. Push: `git push origin feature/amazing-feature`
 8. Open a Pull Request
@@ -490,20 +405,19 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 **Acknowledgments**
 
 - **[OpenRouter](https://openrouter.ai)** - Unified access to 500+ AI models
+- **[Clerk](https://clerk.com)** - Authentication and user management
 - **[FastAPI](https://fastapi.tiangolo.com)** - Modern Python web framework
 - **[Next.js](https://nextjs.org)** - React framework for production
+- **[LangChain](https://python.langchain.com)** - LLM framework
 - **[uv](https://github.com/astral-sh/uv)** - Ultra-fast Python package manager
-{% if cookiecutter.vector_database != "none" %}
-- **[{{cookiecutter.vector_database.title()}}](https://{{cookiecutter.vector_database}}.io)** - Vector database for AI memory
-{% endif %}
 
 ---
 
 ## 📞 **Support**
 
 - 📧 **Email**: {{cookiecutter.author_email}}
-- 🐛 **Issues**: [GitHub Issues](https://github.com/{{cookiecutter.author_name}}/{{cookiecutter.project_slug}}/issues)
-- 📖 **Documentation**: [Project Wiki](https://github.com/{{cookiecutter.author_name}}/{{cookiecutter.project_slug}}/wiki)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/{{cookiecutter.github_username}}/{{cookiecutter.project_slug}}/issues)
+- 📖 **Documentation**: [Project Wiki](https://github.com/{{cookiecutter.github_username}}/{{cookiecutter.project_slug}}/wiki)
 
 ---
 
@@ -511,6 +425,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ using the latest AI technologies**
 
-[🔀 OpenRouter](https://openrouter.ai) • [⚡ FastAPI](https://fastapi.tiangolo.com) • [⚛️ Next.js](https://nextjs.org)
+[🔀 OpenRouter](https://openrouter.ai) • [🔐 Clerk](https://clerk.com) • [⚡ FastAPI](https://fastapi.tiangolo.com) • [⚛️ Next.js](https://nextjs.org)
 
 </div>
