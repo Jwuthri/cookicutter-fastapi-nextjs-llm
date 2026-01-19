@@ -8,12 +8,8 @@ from pathlib import Path
 import click
 from app.config import get_settings
 from app.database.base import SessionLocal, create_tables, drop_tables
-from app.database.models import ChatSession, MessageRoleEnum, User
-from app.database.repositories import (
-    ChatMessageRepository,
-    ChatSessionRepository,
-    UserRepository,
-)
+from app.database.models import User
+from app.database.repositories import UserRepository
 from app.utils.logging import (
     get_logger,
     print_error,
@@ -288,39 +284,6 @@ def seed():
                 metadata={"created_by": "seed_command"}
             )
 
-            # Create a sample chat session
-            session_repo = ChatSessionRepository()
-            sample_session = session_repo.create(
-                db=db,
-                user_id=regular_user.id,
-                title="Welcome Session",
-                system_prompt="You are a helpful assistant.",
-                model_name="gpt-4",
-                settings={"temperature": 0.7, "max_tokens": 1000},
-                metadata={"created_by": "seed_command"}
-            )
-
-            # Add sample messages
-            message_repo = ChatMessageRepository()
-            user_message = message_repo.create(
-                db=db,
-                session_id=sample_session.id,
-                content="Hello! Can you help me get started?",
-                role=MessageRoleEnum.USER,
-                metadata={"created_by": "seed_command"}
-            )
-
-            assistant_message = message_repo.create(
-                db=db,
-                session_id=sample_session.id,
-                content="Hello! I'd be happy to help you get started. What would you like to know?",
-                role=MessageRoleEnum.ASSISTANT,
-                model_name="gpt-4",
-                token_count=25,
-                processing_time_ms=1200,
-                metadata={"created_by": "seed_command"}
-            )
-
         print_success("Database seeded successfully!")
         print_info("Created:")
         print_info(f"  - Admin user: admin@example.com (admin/admin)")
@@ -330,37 +293,3 @@ def seed():
     except Exception as e:
         print_error(f"Database seeding failed: {str(e)}")
         logger.error(f"Database seed error: {str(e)}")
-
-
-@database.command()
-@click.option("--days", default=30, help="Delete sessions older than N days")
-@click.option("--inactive-only", is_flag=True, help="Only delete inactive sessions")
-@click.option("--dry-run", is_flag=True, help="Show what would be deleted without deleting")
-def cleanup(days: int, inactive_only: bool, dry_run: bool):
-    """Clean up old database records."""
-    action = "Would delete" if dry_run else "Deleting"
-    print_info(f"{action} records older than {days} days...")
-
-    try:
-        with SessionLocal() as db:
-            session_repo = ChatSessionRepository()
-
-            if not dry_run:
-                deleted_count = session_repo.cleanup_old_sessions(db, days_old=days)
-                print_success(f"Cleaned up {deleted_count} old sessions")
-            else:
-                from datetime import datetime, timedelta
-
-
-                cutoff_date = datetime.utcnow() - timedelta(days=days)
-                query = db.query(ChatSession).filter(ChatSession.updated_at < cutoff_date)
-
-                if inactive_only:
-                    query = query.filter(ChatSession.is_active == False)
-
-                count = query.count()
-                print_info(f"Would delete {count} sessions")
-
-    except Exception as e:
-        print_error(f"Database cleanup failed: {str(e)}")
-        logger.error(f"Database cleanup error: {str(e)}")
