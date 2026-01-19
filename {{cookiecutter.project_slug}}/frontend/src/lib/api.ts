@@ -17,6 +17,17 @@ export interface APIInfo {
   health_url: string
 }
 
+export interface ChatRequest {
+  message: string
+  model?: string
+  temperature?: number
+}
+
+export interface ChatResponse {
+  response: string
+  model_used: string
+}
+
 class ApiClient {
   private baseUrl: string
   private token?: string | null
@@ -88,6 +99,17 @@ class ApiClient {
 
   async getMetrics(): Promise<Record<string, any>> {
     return this.request<Record<string, any>>('/api/v1/metrics/')
+  }
+
+  async chat(message: string, model?: string, temperature?: number): Promise<ChatResponse> {
+    return this.request<ChatResponse>('/api/v1/chat/', {
+      method: 'POST',
+      body: JSON.stringify({
+        message,
+        model: model || 'openai/gpt-4o-mini',
+        temperature: temperature || 0.7,
+      }),
+    })
   }
 }
 

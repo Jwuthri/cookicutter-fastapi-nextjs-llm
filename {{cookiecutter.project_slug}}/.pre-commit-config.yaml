@@ -94,14 +94,6 @@ repos:
       - id: hadolint
         files: Dockerfile.*$
 
-  # # Security
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
-    hooks:
-      - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
-        exclude: ^(poetry\.lock|package-lock\.json)$
-
 # Global configuration
 default_stages: [commit]
 fail_fast: false

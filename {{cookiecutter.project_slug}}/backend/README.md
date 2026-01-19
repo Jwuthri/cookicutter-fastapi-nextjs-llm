@@ -27,8 +27,7 @@ A clean, simple FastAPI backend with LangChain integration for LLM-powered appli
 ```
 app/
 ├── main.py                    # FastAPI application entry point
-├── config.py                  # Simple configuration (no env-specific complexity)
-├── dependencies.py            # Dependency injection
+├── config.py                  # Configuration from environment variables
 ├── exceptions.py              # Exception handlers
 │
 ├── api/                       # API endpoints
@@ -37,7 +36,8 @@ app/
 │   │   ├── auth.py           # Clerk authentication endpoints
 │   │   ├── health.py         # Health check endpoints
 │   │   └── metrics.py        # Metrics endpoints
-│   └── deps.py               # API-specific dependencies
+│   ├── deps.py               # API-specific dependencies
+│   └── response_wrapper.py   # API response utilities
 │
 ├── agents/                    # LangChain agents framework
 │   ├── agents/               # Agent implementations
@@ -52,10 +52,11 @@ app/
 ├── database/                  # Database layer
 │   ├── base.py               # SQLAlchemy base
 │   ├── session.py            # Async session management
+│   ├── transaction.py        # Transaction utilities
 │   ├── models/               # Database models
-│   │   └── user.py           # User model (only model)
+│   │   └── user.py           # User model (Clerk-based auth)
 │   └── repositories/         # Data access layer
-│       └── user.py           # User repository (only repository)
+│       └── user.py           # User repository
 │
 ├── infrastructure/            # Infrastructure layer
 │   └── llm_provider.py       # OpenRouter LLM provider
@@ -72,12 +73,26 @@ app/
 │
 ├── utils/                     # Utilities
 │   ├── logging.py            # Logging configuration
-│   └── token_counter.py      # Token counting utilities
+│   ├── token_counter.py      # Token counting utilities
+│   ├── exceptions.py         # Exception utilities
+│   ├── helpers.py            # Helper functions
+│   └── retry.py              # Retry logic
+│
+├── cli/                       # CLI commands
+│   ├── commands/             # CLI command modules
+│   │   ├── database.py       # Database management
+│   │   ├── health.py         # Health checks
+│   │   ├── llm.py            # LLM testing/management
+│   │   ├── logs.py           # Log viewing
+│   │   ├── server.py         # Server management
+│   │   ├── setup.py          # Setup utilities
+│   │   └── worker.py         # Worker management (if needed)
+│   └── main.py               # CLI entry point
 │
 └── examples/                  # Example code
-    ├── langchain_example.py  # LangChain usage examples
-    ├── agent_example.py      # Agent usage examples
-    └── tool_example.py       # Tool usage examples
+    ├── langchain_example.py   # LangChain usage examples
+    ├── agent_example.py       # Agent usage examples
+    └── tool_example.py        # Tool usage examples
 ```
 
 ## 🚀 Quick Start
@@ -161,9 +176,6 @@ python -m app.main
 # Main health check
 curl "http://localhost:8000/api/v1/health/"
 
-# Database health
-curl "http://localhost:8000/api/v1/health/database"
-
 # Readiness probe
 curl "http://localhost:8000/api/v1/health/ready"
 
@@ -173,13 +185,50 @@ curl "http://localhost:8000/api/v1/health/live"
 
 ### Authentication (Clerk)
 
+All authentication is handled by Clerk. Users authenticate via Clerk's frontend SDK, and the backend validates JWT tokens.
+
 ```bash
-# Get current user profile
-curl -X GET "http://localhost:8000/api/v1/auth/profile" \
+# Get current user profile (requires authentication)
+curl -X GET "http://localhost:8000/api/v1/auth/me" \
   -H "Authorization: Bearer YOUR_CLERK_JWT_TOKEN"
 
-# Check Clerk configuration
+# Check authentication status (optional auth)
+curl -X GET "http://localhost:8000/api/v1/auth/status" \
+  -H "Authorization: Bearer YOUR_CLERK_JWT_TOKEN"
+
+# Get Clerk configuration for frontend
 curl "http://localhost:8000/api/v1/auth/config"
+
+# Validate JWT token
+curl -X POST "http://localhost:8000/api/v1/auth/validate" \
+  -H "Authorization: Bearer YOUR_CLERK_JWT_TOKEN"
+
+# Check Clerk configuration status
+curl "http://localhost:8000/api/v1/auth/check-config"
+
+# Authentication health check
+curl "http://localhost:8000/api/v1/auth/health"
+```
+
+**Available Auth Endpoints:**
+
+- `GET /api/v1/auth/me` - Get current user profile (requires auth)
+- `GET /api/v1/auth/status` - Get auth status (optional auth)
+- `GET /api/v1/auth/config` - Get Clerk config for frontend
+- `GET /api/v1/auth/user/{user_id}` - Get user by ID (requires auth)
+- `POST /api/v1/auth/validate` - Validate JWT token (requires auth)
+- `GET /api/v1/auth/check-config` - Check Clerk configuration
+- `GET /api/v1/auth/protected` - Example protected route (requires auth)
+- `GET /api/v1/auth/health` - Auth system health check
+
+### Metrics
+
+```bash
+# Get application metrics
+curl "http://localhost:8000/api/v1/metrics/"
+
+# Get metrics summary
+curl "http://localhost:8000/api/v1/metrics/summary"
 ```
 
 ## 🤖 LangChain & Agents Usage
@@ -313,8 +362,8 @@ tests/
 │   └── test_user_repository.py   # User repository tests
 ├── integration/                   # Integration tests
 │   └── test_health_api.py        # API integration tests
-└── performance/                  # Performance tests
-    └── test_load_testing.py      # Load testing
+└── performance/                   # Performance tests
+    └── test_load_testing.py       # Load testing
 ```
 
 ### Test Coverage
@@ -403,6 +452,9 @@ OPENROUTER_API_KEY=your-key-here
 CLERK_SECRET_KEY=sk_test_...
 CLERK_PUBLISHABLE_KEY=pk_test_...
 
+# CORS (comma-separated origins)
+CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+
 # Logging
 LOG_LEVEL=INFO
 DEBUG=false
@@ -432,8 +484,11 @@ See `app/agents/README.md` for more details.
 
 ### Database
 
-- **Models**: Only `User` model
-- **Repositories**: Only `UserRepository`
+- **Models**: `User` model (Clerk-based authentication)
+  - Uses `clerk_id` as the primary identifier
+  - No password fields (authentication handled by Clerk)
+  - Supports user preferences and metadata
+- **Repositories**: `UserRepository` with async CRUD operations
 - **Async**: Full async/await support
 
 ### Infrastructure
@@ -444,7 +499,7 @@ See `app/agents/README.md` for more details.
 
 ## 🔒 Security
 
-- **Clerk Authentication**: JWT-based authentication
+- **Clerk Authentication**: JWT-based authentication (no password storage)
 - **CORS**: Configurable CORS settings
 - **Security Headers**: Automatic security headers
 - **Input Validation**: Pydantic validation
@@ -510,11 +565,21 @@ cd backend
 uv pip install -e .
 ```
 
+**Clerk authentication not working:**
+```bash
+# Check Clerk configuration
+curl "http://localhost:8000/api/v1/auth/check-config"
+
+# Verify JWT token format
+# Tokens should start with "eyJ" (base64 encoded JWT)
+```
+
 ## 📚 Additional Resources
 
 - **API Documentation**: http://localhost:8000/docs
 - **Agents README**: `app/agents/README.md`
 - **LangChain Docs**: https://python.langchain.com/
+- **Clerk Docs**: https://clerk.com/docs
 
 ## 📄 License
 
