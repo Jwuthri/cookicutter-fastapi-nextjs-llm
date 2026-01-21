@@ -10,6 +10,7 @@ from app.api.v1.router import api_router
 from app.config import get_settings
 from app.database.session import cleanup_database, initialize_database
 from app.exceptions import setup_exception_handlers
+from app.infrastructure.langfuse_handler import flush_langfuse, shutdown_langfuse
 from app.middleware import setup_middleware
 from app.models.base import APIInfo
 from fastapi import FastAPI
@@ -36,6 +37,11 @@ async def lifespan(app: FastAPI):
     finally:
         # Shutdown
         try:
+            # Flush and shutdown Langfuse if enabled
+            flush_langfuse()
+            shutdown_langfuse()
+            
+            # Cleanup database
             await cleanup_database()
             logger.info("Database cleaned up successfully")
         except Exception as e:

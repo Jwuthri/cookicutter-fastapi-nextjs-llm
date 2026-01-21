@@ -2,8 +2,10 @@
 Chat endpoints for LLM interactions with LangChain + OpenRouter.
 """
 
+import uuid
 from typing import Optional
 
+from app.infrastructure.langfuse_handler import get_langfuse_config
 from app.infrastructure.llm_provider import OpenRouterProvider
 from app.security.clerk_auth import ClerkUser, require_current_user
 from app.utils.logging import get_logger
@@ -22,6 +24,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, description="User message")
     model: Optional[str] = Field("openai/gpt-4o-mini", description="OpenRouter model name")
     temperature: Optional[float] = Field(0.7, ge=0.0, le=2.0, description="Model temperature")
+    session_id: Optional[str] = Field(None, description="Session ID for grouping related traces in Langfuse")
 
 
 class ChatResponse(BaseModel):
@@ -61,8 +64,23 @@ async def chat(
         
         chain = prompt | llm | StrOutputParser()
         
-        # Invoke chain
-        response_text = await chain.ainvoke({"input": request_body.message})
+        # Build Langfuse config with filtering attributes for easy filtering in Langfuse
+        # session_id groups related traces, user_id enables user-level filtering
+        langfuse_config = get_langfuse_config(
+            session_id=request_body.session_id or str(uuid.uuid4()),
+            user_id=current_user.id,
+            tags=["chat", "api"],
+            metadata={
+                "model": request_body.model,
+                "temperature": request_body.temperature,
+            },
+        )
+        
+        # Invoke chain with Langfuse config
+        response_text = await chain.ainvoke(
+            {"input": request_body.message},
+            config=langfuse_config
+        )
         
         logger.info(f"Chat response generated successfully for user {current_user.id}")
         

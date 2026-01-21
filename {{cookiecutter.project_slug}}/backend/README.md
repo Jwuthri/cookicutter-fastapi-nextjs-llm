@@ -17,6 +17,9 @@ A clean, simple FastAPI backend with LangChain integration for LLM-powered appli
 
 ### LangChain & LLM Features
 - **OpenRouter Provider**: Unified access to multiple LLM providers
+- **Model Fallbacks**: Automatic fallback to backup models on failures
+- **OpenRouter Embeddings**: Direct embeddings support via OpenRouter
+- **Langfuse Integration**: Automatic LLM tracing and observability
 - **Token Counting**: Accurate token counting utilities
 - **Agent Framework**: Modular agent structure (agents/prompt/tool/structured_output)
 - **Context Management**: Built-in context management agent
@@ -59,7 +62,8 @@ app/
 │       └── user.py           # User repository
 │
 ├── infrastructure/            # Infrastructure layer
-│   └── llm_provider.py       # OpenRouter LLM provider
+│   ├── llm_provider.py       # OpenRouter LLM provider & embeddings
+│   └── langfuse_handler.py   # Langfuse observability integration
 │
 ├── models/                    # Pydantic API models
 │   ├── base.py               # Base response models
@@ -243,7 +247,7 @@ from langchain_core.output_parsers import StrOutputParser
 # Initialize provider
 provider = OpenRouterProvider()
 
-# Get LLM instance
+# Get LLM instance (Langfuse automatically enabled if configured)
 llm = provider.get_llm(model_name="openai/gpt-4o-mini", temperature=0.7)
 
 # Create chain
@@ -258,6 +262,168 @@ chain = prompt | llm | StrOutputParser()
 response = chain.invoke({"input": "Hello!"})
 print(response)
 ```
+
+### Model Fallbacks
+
+OpenRouter supports automatic model fallbacks. If the primary model fails (rate limits, downtime, moderation, etc.), it automatically tries the next model in the list.
+
+```python
+from app.infrastructure.llm_provider import OpenRouterProvider
+
+provider = OpenRouterProvider()
+
+# Method 1: Using get_llm with fallback_models parameter
+llm = provider.get_llm(
+    model_name="anthropic/claude-3.5-sonnet",
+    fallback_models=["openai/gpt-4o-mini", "gryphe/mythomax-l2-13b"]
+)
+
+# Method 2: Using get_llm_with_fallbacks (convenience method)
+llm = provider.get_llm_with_fallbacks([
+    "anthropic/claude-3.5-sonnet",  # Primary model
+    "openai/gpt-4o-mini",            # First fallback
+    "gryphe/mythomax-l2-13b"        # Second fallback
+])
+
+# Use with chain
+chain = prompt | llm | StrOutputParser()
+response = chain.invoke({"input": "Hello!"})
+```
+
+**Provider Routing** (control which provider endpoints to use):
+
+```python
+llm = provider.get_llm(
+    model_name="mistralai/mixtral-8x7b-instruct",
+    provider_config={
+        "order": ["openai", "together"],  # Try OpenAI first, then Together AI
+        "allow_fallbacks": True           # Allow other providers if both fail
+    }
+)
+```
+
+### OpenRouter Embeddings
+
+Generate embeddings using OpenRouter's embedding models:
+
+```python
+from app.infrastructure import OpenRouterEmbeddings
+
+# Initialize embeddings
+embeddings = OpenRouterEmbeddings(
+    model="openai/text-embedding-3-small"  # Default model
+)
+
+# Embed documents
+documents = ["Hello world", "How are you?"]
+vectors = embeddings.embed_documents(documents)
+
+# Embed a single query
+query_vector = embeddings.embed_query("What is this about?")
+
+# Async support
+vectors_async = await embeddings.aembed_documents(documents)
+query_vector_async = await embeddings.aembed_query("Query text")
+```
+
+### Langfuse Observability
+
+Langfuse automatically tracks all LLM calls when enabled, providing detailed traces, token usage, costs, and more.
+
+**Setup:**
+
+1. Enable Langfuse in your `.env`:
+```bash
+LANGFUSE_ENABLED=true
+LANGFUSE_SECRET_KEY=sk-lf-your-secret-key
+LANGFUSE_PUBLIC_KEY=pk-lf-your-public-key
+LANGFUSE_BASE_URL=https://cloud.langfuse.com
+```
+
+2. Langfuse is automatically enabled for all LLM calls:
+```python
+# Langfuse automatically tracks this call
+llm = provider.get_llm(model_name="openai/gpt-4o-mini")
+response = chain.invoke({"input": "Hello!"})
+```
+
+**Filtering Attributes** (for easy filtering in Langfuse UI):
+
+```python
+from app.infrastructure.langfuse_handler import get_langfuse_config
+
+# Build config with filtering attributes
+config = get_langfuse_config(
+    session_id="chat-session-123",      # Group related traces
+    user_id="user_456",                  # User-level filtering
+    tags=["production", "chat"],         # Custom tags
+    metadata={"request_id": "req-789"}   # Custom metadata
+)
+
+# Use with chain invocation
+response = chain.invoke(
+    {"input": "Hello!"},
+    config=config
+)
+```
+
+**Using with `create_agent`:**
+
+```python
+from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
+from app.infrastructure.langfuse_handler import get_langfuse_config
+from app.infrastructure.llm_provider import OpenRouterProvider
+
+# Initialize provider
+provider = OpenRouterProvider()
+llm = provider.get_llm(model_name="openai/gpt-4o-mini")
+
+# Create agent with structured output
+agent = create_agent(
+    model=llm,
+    system_prompt="You are a helpful assistant.",
+    tools=[],  # Add your tools here
+    response_format=YourPydanticModel,  # Your structured output model
+)
+
+# Build Langfuse config with filtering attributes
+langfuse_config = get_langfuse_config(
+    session_id="agent-session-123",
+    user_id="user_456",
+    tags=["agent", "structured-output"],
+    metadata={"agent_type": "analysis"}
+)
+
+# Invoke agent with Langfuse config
+result = await agent.ainvoke(
+    {"messages": [HumanMessage(content="Your input here")]},
+    config=langfuse_config  # Pass config as second parameter
+)
+
+# Or synchronously
+result = agent.invoke(
+    {"messages": [HumanMessage(content="Your input here")]},
+    config=langfuse_config
+)
+```
+
+**Available Filtering Attributes:**
+- `session_id`: Groups related traces (e.g., chat sessions)
+- `user_id`: Enables user-level filtering and analytics
+- `tags`: Custom labels (e.g., `["prod", "chat", "v2"]`)
+- `metadata`: Custom key-value pairs for additional context
+- `run_name`: Optional name for the trace
+
+**Disable Langfuse for specific calls:**
+```python
+llm = provider.get_llm(
+    model_name="openai/gpt-4o-mini",
+    enable_langfuse=False  # Disable Langfuse for this call
+)
+```
+
+View your traces at: https://cloud.langfuse.com
 
 ### Using Agents
 
@@ -423,12 +589,68 @@ Check out the example files in `app/examples/`:
 - **`langchain_example.py`**: Basic LangChain usage
 - **`agent_example.py`**: Using agents
 - **`tool_example.py`**: Using LangChain tools
+- **`create_agent_example.py`**: Using `create_agent` with Langfuse filtering attributes
 
 Run examples:
 ```bash
 python -m app.examples.langchain_example
 python -m app.examples.agent_example
 python -m app.examples.tool_example
+python -m app.examples.create_agent_example
+```
+
+## 🖥️ CLI Commands
+
+The project includes a CLI for managing various aspects of the application:
+
+### LLM Commands
+
+```bash
+# Test OpenRouter connection
+python -m app.cli llm test
+
+# List available models
+python -m app.cli llm list
+
+# Interactive chat with a model
+python -m app.cli llm chat --model openai/gpt-4o-mini
+
+# Chat with fallback models
+python -m app.cli llm chat \
+  --model anthropic/claude-3.5-sonnet \
+  --fallback openai/gpt-4o-mini \
+  --fallback gryphe/mythomax-l2-13b
+
+# Get a single completion
+python -m app.cli llm complete "Tell me a joke" \
+  --model openai/gpt-4o-mini \
+  --temperature 0.7
+
+# Chat with multiple fallback models (convenience command)
+python -m app.cli llm chat-fallback \
+  anthropic/claude-3.5-sonnet \
+  openai/gpt-4o-mini \
+  gryphe/mythomax-l2-13b
+
+# Configure OpenRouter interactively
+python -m app.cli llm config
+```
+
+### Database Commands
+
+```bash
+# Initialize database
+python -m app.cli database init
+
+# Run migrations
+python -m app.cli database migrate
+```
+
+### Health Commands
+
+```bash
+# Check application health
+python -m app.cli health check
 ```
 
 ## 🔧 Configuration
@@ -447,6 +669,12 @@ API_PORT=8000
 
 # OpenRouter (for LLM)
 OPENROUTER_API_KEY=your-key-here
+
+# Langfuse Observability (optional)
+LANGFUSE_ENABLED=false
+LANGFUSE_SECRET_KEY=sk-lf-your-secret-key
+LANGFUSE_PUBLIC_KEY=pk-lf-your-public-key
+LANGFUSE_BASE_URL=https://cloud.langfuse.com
 
 # Clerk Authentication
 CLERK_SECRET_KEY=sk_test_...
@@ -493,7 +721,9 @@ See `app/agents/README.md` for more details.
 
 ### Infrastructure
 
-- **LLM Provider**: OpenRouter integration
+- **LLM Provider**: OpenRouter integration with fallback support
+- **Embeddings**: OpenRouter embeddings support
+- **Langfuse Handler**: Automatic LLM tracing and observability
 - **Token Counter**: Token counting utilities
 - **Model Info**: Context limits and model information
 
@@ -509,6 +739,7 @@ See `app/agents/README.md` for more details.
 - **Health Checks**: `/api/v1/health/`
 - **Metrics**: `/api/v1/metrics/`
 - **Structured Logging**: Request tracing with correlation IDs
+- **Langfuse Observability**: LLM tracing, token usage, costs, and performance metrics
 
 ## 🚀 Production Deployment
 
@@ -534,6 +765,10 @@ Required:
 Optional:
 - `CLERK_SECRET_KEY`: Clerk secret key
 - `CLERK_PUBLISHABLE_KEY`: Clerk publishable key
+- `LANGFUSE_ENABLED`: Enable Langfuse observability (default: false)
+- `LANGFUSE_SECRET_KEY`: Langfuse secret key
+- `LANGFUSE_PUBLIC_KEY`: Langfuse public key
+- `LANGFUSE_BASE_URL`: Langfuse host URL (default: https://cloud.langfuse.com)
 - `DEBUG`: Set to `false` in production
 - `LOG_LEVEL`: Logging level (INFO, WARNING, ERROR)
 

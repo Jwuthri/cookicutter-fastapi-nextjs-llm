@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     # OpenRouter (optional, for future use)
     openrouter_api_key: str = ""
     
+    # Langfuse Observability (optional)
+    langfuse_enabled: bool = False
+    langfuse_secret_key: str = ""
+    langfuse_public_key: str = ""
+    langfuse_base_url: str = "https://cloud.langfuse.com"
+    
     # Logging
     log_level: str = "INFO"
     
