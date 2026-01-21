@@ -1,91 +1,89 @@
 """
-Example use case: Using the Context Manager Agent.
+Example use case: Using the Customer Support Agent.
 
 This example demonstrates:
-1. Setting up the context manager agent
-2. Checking context limits
-3. Deciding on reduction strategy
-4. Reducing context when needed
+1. Setting up the customer support agent
+2. Handling customer inquiries
+3. Using Langfuse filtering attributes
+4. Working with structured responses
 """
 
-from app.agents.agents.context_manager import (
-    ContextManagerAgent,
-    ContextCheckRequest,
-    ContextReduceRequest,
-)
+import asyncio
+
+from app.agents import CustomerSupportAgent
 from app.infrastructure.llm_provider import OpenRouterProvider
 from app.utils.logging import get_logger
 
 logger = get_logger("agent_example")
 
 
-def context_manager_example():
-    """Example of using the context manager agent."""
+async def customer_support_example():
+    """Example of using the customer support agent."""
     # Initialize provider
     provider = OpenRouterProvider()
     
-    # Create context manager agent
-    agent = ContextManagerAgent(
+    # Create customer support agent
+    agent = CustomerSupportAgent(
+        llm_provider=provider,
+        model_name="openai/gpt-4o-mini",
+        temperature=0.7
+    )
+    
+    # Example customer inquiries
+    inquiries = [
+        "I need help with my order #12345",
+        "What is your return policy?",
+        "I'm having trouble logging into my account",
+    ]
+    
+    for i, inquiry in enumerate(inquiries, 1):
+        logger.info(f"\n=== Inquiry {i} ===")
+        logger.info(f"Customer: {inquiry}")
+        
+        # Handle inquiry with Langfuse filtering
+        response = await agent.handle_inquiry(
+            customer_message=inquiry,
+            customer_id=f"customer_{i}",
+            session_id="support-session-123",
+            tags=["support", "example"],
+            metadata={"inquiry_number": i}
+        )
+        
+        logger.info(f"Response: {response.response}")
+        logger.info(f"Sentiment: {response.sentiment}")
+        logger.info(f"Requires escalation: {response.requires_escalation}")
+        if response.requires_escalation:
+            logger.info(f"Escalation reason: {response.escalation_reason}")
+        logger.info(f"Confidence: {response.confidence:.2f}")
+        if response.suggested_actions:
+            logger.info(f"Suggested actions: {response.suggested_actions}")
+
+
+def customer_support_sync_example():
+    """Example of using the customer support agent synchronously."""
+    provider = OpenRouterProvider()
+    agent = CustomerSupportAgent(
         llm_provider=provider,
         model_name="openai/gpt-4o-mini"
     )
     
-    # Example system prompt
-    system_prompt = "You are a helpful assistant."
+    inquiry = "How do I reset my password?"
     
-    # Example history (simulated conversation items)
-    history = [
-        {"role": "user", "content": "Hello, how are you?"},
-        {"role": "assistant", "content": "I'm doing well, thank you!"},
-        {"role": "user", "content": "What is Python?"},
-        {"role": "assistant", "content": "Python is a programming language..."},
-        # ... more items
-    ]
-    
-    # Current item to add
-    current_item = "Can you explain machine learning?"
-    
-    # Check context
-    check_request = ContextCheckRequest(
-        system_prompt=system_prompt,
-        history=history,
-        current_item=current_item,
-        model_name="openai/gpt-4o-mini"
+    response = agent.handle_inquiry_sync(
+        customer_message=inquiry,
+        customer_id="user_456",
+        session_id="sync-session-789"
     )
     
-    check_result = agent.check_context(check_request)
+    logger.info(f"Response: {response.response}")
+    logger.info(f"Confidence: {response.confidence:.2f}")
     
-    logger.info(f"Total tokens: {check_result.total_tokens}")
-    logger.info(f"Safe limit: {check_result.safe_limit}")
-    logger.info(f"Exceeds limit: {check_result.exceeds_limit}")
-    
-    # If exceeds limit, decide on strategy
-    if check_result.exceeds_limit:
-        strategy = agent.decide_reduction_strategy(
-            check_result,
-            len(history)
-        )
-        
-        logger.info(f"Strategy: {strategy.strategy}")
-        logger.info(f"Reason: {strategy.reason}")
-        
-        # Reduce context
-        reduce_request = ContextReduceRequest(
-            history=history,
-            target_tokens=check_result.safe_limit - check_result.system_prompt_tokens - check_result.current_item_tokens,
-            model_name="openai/gpt-4o-mini"
-        )
-        
-        reduction_result = agent.reduce_context(reduce_request, strategy)
-        
-        logger.info(f"Original tokens: {reduction_result.original_tokens}")
-        logger.info(f"Reduced tokens: {reduction_result.reduced_tokens}")
-        logger.info(f"Items before: {reduction_result.items_before}")
-        logger.info(f"Items after: {reduction_result.items_after}")
-    
-    return check_result
+    return response
 
 
 if __name__ == "__main__":
-    logger.info("=== Context Manager Agent Example ===")
-    context_manager_example()
+    logger.info("=== Customer Support Agent Example (Async) ===")
+    asyncio.run(customer_support_example())
+    
+    logger.info("\n=== Customer Support Agent Example (Sync) ===")
+    customer_support_sync_example()

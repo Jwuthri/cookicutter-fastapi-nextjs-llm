@@ -1,13 +1,7 @@
 """Structured output module."""
 
-from app.agents.structured_output.context_manager import (
-    ContextCheckResult,
-    ContextReductionStrategy,
-    ContextReductionResult,
-)
+from app.agents.structured_output.customer_support import CustomerSupportResponse
 
 __all__ = [
-    "ContextCheckResult",
-    "ContextReductionStrategy",
-    "ContextReductionResult",
+    "CustomerSupportResponse",
 ]

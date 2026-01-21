@@ -1,13 +1,7 @@
 """Agents module."""
 
-from app.agents.agents.context_manager import (
-    ContextManagerAgent,
-    ContextCheckRequest,
-    ContextReduceRequest,
-)
+from app.agents.agents.customer_support import CustomerSupportAgent
 
 __all__ = [
-    "ContextManagerAgent",
-    "ContextCheckRequest",
-    "ContextReduceRequest",
+    "CustomerSupportAgent",
 ]

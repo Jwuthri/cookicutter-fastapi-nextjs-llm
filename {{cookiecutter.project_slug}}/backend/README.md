@@ -44,13 +44,13 @@ app/
 │
 ├── agents/                    # LangChain agents framework
 │   ├── agents/               # Agent implementations
-│   │   └── context_manager.py
+│   │   └── customer_support.py
 │   ├── prompt/               # Prompt templates
-│   │   └── context_manager.py
+│   │   └── customer_support.py
 │   ├── tool/                 # LangChain tools
-│   │   └── context_manager.py
+│   │   └── customer_support.py
 │   └── structured_output/    # Pydantic output models
-│       └── context_manager.py
+│       └── customer_support.py
 │
 ├── database/                  # Database layer
 │   ├── base.py               # SQLAlchemy base
@@ -428,44 +428,52 @@ View your traces at: https://cloud.langfuse.com
 ### Using Agents
 
 ```python
-from app.agents.agents.context_manager import ContextManagerAgent, ContextCheckRequest
+from app.agents import CustomerSupportAgent
 from app.infrastructure.llm_provider import OpenRouterProvider
 
 # Initialize
 provider = OpenRouterProvider()
-agent = ContextManagerAgent(provider, model_name="openai/gpt-4o-mini")
-
-# Check context
-request = ContextCheckRequest(
-    system_prompt="You are a helpful assistant.",
-    history=[{"role": "user", "content": "Hello"}],
-    current_item="New message",
-    model_name="openai/gpt-4o-mini"
+agent = CustomerSupportAgent(
+    llm_provider=provider,
+    model_name="openai/gpt-4o-mini",
+    temperature=0.7
 )
 
-result = agent.check_context(request)
-print(f"Total tokens: {result.total_tokens}")
-print(f"Exceeds limit: {result.exceeds_limit}")
+# Handle customer inquiry (async)
+response = await agent.handle_inquiry(
+    customer_message="I need help with my order",
+    customer_id="user_123",
+    session_id="support-session-456"
+)
+
+print(f"Response: {response.response}")
+print(f"Requires escalation: {response.requires_escalation}")
+print(f"Confidence: {response.confidence}")
 ```
 
 ### Using Tools
 
 ```python
-from app.agents.tool.context_manager import count_history_items, get_recent_items
+from app.agents.tool.customer_support import (
+    search_knowledge_base,
+    check_order_status,
+    create_support_ticket,
+    CUSTOMER_SUPPORT_TOOLS
+)
 
 # Use tools directly
-history = [{"role": "user", "content": "Hello"}]
-count = count_history_items.invoke({"history": history})
+kb_result = search_knowledge_base.invoke({"query": "return policy"})
+order_info = check_order_status.invoke({"order_id": "ORD-123"})
 
 # Bind tools to LLM
 from app.infrastructure.llm_provider import OpenRouterProvider
 
 provider = OpenRouterProvider()
 llm = provider.get_llm(model_name="openai/gpt-4o-mini")
-llm_with_tools = llm.bind_tools([count_history_items, get_recent_items])
+llm_with_tools = llm.bind_tools(CUSTOMER_SUPPORT_TOOLS)
 
 # LLM can now use these tools
-response = llm_with_tools.invoke("Count items in my history")
+response = llm_with_tools.invoke("Check order status for ORD-123")
 ```
 
 ### Token Counting
