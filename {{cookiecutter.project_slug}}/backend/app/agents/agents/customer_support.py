@@ -3,7 +3,7 @@ import json
 from typing import AsyncGenerator, Callable, Optional
 
 from langchain.agents import create_agent
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from app.agents.prompt.customer_support import SYSTEM_PROMPT
 from app.agents.structured_output.customer_support import CustomerSupportResponse
@@ -11,9 +11,44 @@ from app.agents.tool.customer_support import CUSTOMER_SUPPORT_TOOLS
 from app.infrastructure.langfuse_handler import get_langfuse_config
 from app.infrastructure.llm_provider import OpenRouterProvider
 from app.utils.logging import get_logger
-from app.utils.structured_streaming import StructuredStreamingHandler
+from app.utils.structured_streaming import (
+    StructuredStreamingHandler,
+    parse_response_model_str,
+)
 
 logger = get_logger("customer_support_agent")
+
+# System prompt for streaming mode - instructs LLM to output JSON directly
+STREAMING_SYSTEM_PROMPT = """You are a helpful and empathetic customer support agent.
+
+Your responsibilities:
+1. Listen carefully to customer inquiries and concerns
+2. Provide clear, accurate, and helpful responses
+3. Escalate complex issues when necessary
+4. Maintain a professional and friendly tone
+5. Focus on resolving the customer's issue efficiently
+
+Guidelines:
+- Be patient and understanding
+- Ask clarifying questions when needed
+- Provide step-by-step solutions when possible
+- Acknowledge the customer's feelings
+- Offer alternatives when a direct solution isn't available
+- Escalate to human support for complex or sensitive issues
+
+Always prioritize customer satisfaction and clear communication.
+
+IMPORTANT: You MUST respond with a valid JSON object in this exact format:
+{
+  "response": "Your helpful response to the customer here",
+  "sentiment": "positive" | "neutral" | "negative",
+  "requires_escalation": true | false,
+  "escalation_reason": "reason if escalation needed, null otherwise",
+  "suggested_actions": ["action 1", "action 2"],
+  "confidence": 0.0 to 1.0
+}
+
+Output ONLY the JSON object, no other text before or after."""
 
 
 class CustomerSupportAgent:
@@ -145,11 +180,10 @@ class CustomerSupportAgent:
         """
         Handle a customer inquiry with streaming structured output.
         
+        Uses stream_mode="messages" to get incremental LLM tokens and parses
+        them into structured output incrementally.
+        
         Yields incremental CustomerSupportResponse updates as fields arrive.
-        Fields update incrementally:
-        - response: grows character by character
-        - suggested_actions: list extends as items arrive
-        - confidence, sentiment, requires_escalation: update when determined
         
         Args:
             customer_message: The customer's message or question
@@ -175,41 +209,48 @@ class CustomerSupportAgent:
             run_name="customer-support-inquiry-stream"
         )
         
-        # Initialize streaming handler (tracks changes internally, Agno-style)
+        # Initialize streaming handler for incremental JSON parsing
         handler = StructuredStreamingHandler(CustomerSupportResponse)
         last_yielded: Optional[CustomerSupportResponse] = None
         
+        # Reset tool tracking state
+        self._in_target_tool = False
+        self._should_reset_handler = False
+        
         try:
-            # Stream agent response
-            async for chunk in self.agent.astream(
+            # Use stream_mode="messages" to get LLM tokens as they stream
+            # This is the proper LangChain way per docs
+            async for token, metadata_info in self.agent.astream(
                 {"messages": [HumanMessage(content=customer_message)]},
-                config=langfuse_config
+                config=langfuse_config,
+                stream_mode="messages"
             ):
-                # Extract content from chunk
-                content_chunk = self._extract_content_from_chunk(chunk)
+                # Extract content from token - for structured output it's in tool_call_chunks
+                content = self._extract_text_from_message(token)
                 
-                if content_chunk:
-                    # Add chunk and get incremental update
-                    # handler.add_chunk() only returns a value if data changed (Agno's approach)
-                    incremental_update = handler.add_chunk(content_chunk)
+                # Reset handler if we just started the target tool
+                if getattr(self, "_should_reset_handler", False):
+                    handler.reset()
+                    self._should_reset_handler = False
+                
+                if content:
+                    # Add to handler and try to parse incrementally
+                    incremental_update = handler.add_chunk(content)
                     
                     if incremental_update is not None:
-                        # Yield the update (handler already ensures it's different from its last return)
                         last_yielded = incremental_update
                         yield incremental_update
             
             # Yield final response if we have one and haven't yielded it yet
             final_response = handler.get_last_valid()
             if final_response is not None:
-                # Only yield if different from what we last yielded
-                # (handler tracks internally, but we track what we actually yielded)
                 if (
                     last_yielded is None
                     or final_response.model_dump() != last_yielded.model_dump()
                 ):
                     yield final_response
             elif last_yielded is None:
-                # Fallback: yield a basic response if nothing was parsed
+                # Fallback: yield empty response
                 logger.warning(
                     "[CustomerSupportAgent] No valid structured response parsed from stream"
                 )
@@ -220,7 +261,7 @@ class CustomerSupportAgent:
                     confidence=0.5
                 )
         except Exception as e:
-            logger.error(f"[CustomerSupportAgent] Error in streaming: {e}")
+            logger.error(f"[CustomerSupportAgent] Error in streaming: {e}", exc_info=True)
             # Yield fallback response
             yield CustomerSupportResponse(
                 response="",
@@ -281,24 +322,88 @@ class CustomerSupportAgent:
         
         return final_response
 
-    def _extract_content_from_chunk(self, chunk: dict) -> str:
+    def _extract_text_from_message(self, message, target_tool: str = "CustomerSupportResponse") -> Optional[str]:
         """
-        Extract content string from LangChain streaming chunk.
+        Extract text content from a LangChain message chunk.
         
-        Prioritizes raw JSON content for incremental parsing (Agno-style).
-        Handles different chunk formats:
-        - Raw content from AIMessage (preferred for streaming)
-        - Chunks with "structured_response" key (fallback)
-        - Direct string content
+        Handles AIMessageChunk, AIMessage, and various content formats.
+        For structured output, the content comes through tool_call_chunks.
+        
+        IMPORTANT: Only extracts from the target tool (CustomerSupportResponse)
+        to avoid mixing with other tool calls.
+        
+        Args:
+            message: LangChain message object
+            target_tool: Name of the tool to extract from
+            
+        Returns:
+            Text content string or None
+        """
+        if message is None:
+            return None
+        
+        # IMPORTANT: For structured output, content is in tool_call_chunks
+        # We need to filter for only the CustomerSupportResponse tool
+        if hasattr(message, "tool_call_chunks") and message.tool_call_chunks:
+            args_parts = []
+            for tc in message.tool_call_chunks:
+                name = tc.get("name", "")
+                args = tc.get("args", "")
+                
+                # If this chunk has a name, check if it's our target tool
+                if name:
+                    if name == target_tool:
+                        # Mark that we're now in the right tool call
+                        self._in_target_tool = True
+                        # Signal to reset the handler
+                        self._should_reset_handler = True
+                    else:
+                        # Different tool, skip
+                        self._in_target_tool = False
+                
+                # Only capture args if we're in the target tool
+                if getattr(self, "_in_target_tool", False) and args:
+                    args_parts.append(args)
+            
+            if args_parts:
+                return "".join(args_parts)
+        
+        # DON'T extract regular content - it's tool results, not our structured output
+        # Only return None so we skip tool result messages
+        return None
+
+    def _extract_content_from_chunk(self, chunk) -> any:
+        """
+        Extract content from LangChain streaming chunk.
+        
+        Smart extraction that handles:
+        1. BaseModel instances (from structured output)
+        2. Dicts (can be converted to BaseModel)
+        3. Raw JSON strings (for incremental parsing)
         
         Args:
             chunk: Streaming chunk from LangChain agent
             
         Returns:
-            Extracted content string (raw JSON preferred)
+            BaseModel instance, dict, or string - whatever the handler can process
         """
-        # Priority 1: Try messages for raw content (best for streaming)
+        # Case 1: Already a BaseModel instance (best case - direct structured output)
+        if isinstance(chunk, CustomerSupportResponse):
+            return chunk
+        
+        # Case 2: Dict with structured_response key
         if isinstance(chunk, dict):
+            if "structured_response" in chunk:
+                structured = chunk["structured_response"]
+                # Return as-is (handler will detect BaseModel or dict)
+                if isinstance(structured, CustomerSupportResponse):
+                    return structured
+                elif isinstance(structured, dict):
+                    return structured
+                elif isinstance(structured, str):
+                    return structured
+            
+            # Case 3: Dict with messages (raw content)
             if "messages" in chunk:
                 messages = chunk["messages"]
                 if isinstance(messages, list) and len(messages) > 0:
@@ -306,7 +411,6 @@ class CustomerSupportAgent:
                     if isinstance(last_message, AIMessage):
                         content = last_message.content
                         if isinstance(content, str):
-                            # Raw string content (preferred for incremental parsing)
                             return content
                         elif isinstance(content, list):
                             # Handle content blocks (e.g., from OpenAI)
@@ -318,29 +422,32 @@ class CustomerSupportAgent:
                                     text_parts.append(block)
                             return "".join(text_parts)
             
-            # Priority 2: Try direct content keys (raw content)
+            # Case 4: Direct content keys
             for key in ["content", "text", "response"]:
                 if key in chunk:
                     value = chunk[key]
-                    if isinstance(value, str):
-                        return value
-            
-            # Priority 3: Try structured_response (fallback - already parsed)
-            if "structured_response" in chunk:
-                structured = chunk["structured_response"]
-                if isinstance(structured, CustomerSupportResponse):
-                    # Convert BaseModel to JSON string for parsing
-                    return structured.model_dump_json()
-                elif isinstance(structured, dict):
-                    return json.dumps(structured)
-                elif isinstance(structured, str):
-                    return structured
+                    # Return dicts as-is, strings as strings
+                    return value
         
-        # Fallback: convert to string
+        # Case 5: String (raw JSON)
         if isinstance(chunk, str):
             return chunk
         
-        return ""
+        # Case 6: AIMessage directly
+        if isinstance(chunk, AIMessage):
+            content = chunk.content
+            if isinstance(content, str):
+                return content
+            elif isinstance(content, list):
+                text_parts = []
+                for block in content:
+                    if isinstance(block, dict) and "text" in block:
+                        text_parts.append(block["text"])
+                    elif isinstance(block, str):
+                        text_parts.append(block)
+                return "".join(text_parts)
+        
+        return None
 
     def handle_inquiry_sync(
         self,

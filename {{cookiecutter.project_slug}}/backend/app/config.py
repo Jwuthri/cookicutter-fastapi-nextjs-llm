@@ -1,10 +1,11 @@
 """Application settings loaded from environment variables."""
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
+from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+PROJECT_ROOT = Path(__file__).parent.parent
 
 
 class Settings(BaseSettings):
@@ -51,10 +52,15 @@ class Settings(BaseSettings):
     clerk_publishable_key: Optional[str] = None
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:3000", "http://localhost:8000"]
+    cors_origins: str = "http://localhost:3000,http://localhost:8000"
     cors_allow_credentials: bool = True
     cors_allow_methods: list[str] = ["*"]
     cors_allow_headers: list[str] = ["*"]
+    
+    @computed_field
+    def cors_origins_list(self) -> list[str]:
+        """Parse comma-separated CORS_ORIGINS string into list."""
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 # Global settings instance
