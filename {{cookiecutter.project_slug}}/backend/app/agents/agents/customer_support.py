@@ -294,10 +294,11 @@ class CustomerSupportAgent:
         """
         Extract text content from a LangChain message chunk.
         
-        Handles AIMessageChunk, AIMessage, and various content formats.
-        For structured output, the content comes through tool_call_chunks.
+        Handles different provider formats:
+        - Anthropic: Structured output comes through tool_call_chunks
+        - OpenAI: Structured output comes through content directly
         
-        IMPORTANT: Only extracts from the target tool (CustomerSupportResponse)
+        IMPORTANT: For Anthropic, only extracts from the target tool (CustomerSupportResponse)
         to avoid mixing with other tool calls.
         
         Args:
@@ -310,8 +311,7 @@ class CustomerSupportAgent:
         if message is None:
             return None
         
-        # IMPORTANT: For structured output, content is in tool_call_chunks
-        # We need to filter for only the CustomerSupportResponse tool
+        # CASE 1: Anthropic-style - structured output in tool_call_chunks
         if hasattr(message, "tool_call_chunks") and message.tool_call_chunks:
             args_parts = []
             for tc in message.tool_call_chunks:
@@ -336,8 +336,26 @@ class CustomerSupportAgent:
             if args_parts:
                 return "".join(args_parts)
         
-        # DON'T extract regular content - it's tool results, not our structured output
-        # Only return None so we skip tool result messages
+        # CASE 2: OpenAI-style - structured output comes directly in content
+        # OpenAI streams JSON directly without tool_call_chunks
+        content = getattr(message, "content", None)
+        if content and isinstance(content, str):
+            # Check if this looks like JSON (structured output)
+            # OpenAI streams JSON tokens directly
+            stripped = content.strip()
+            if stripped:
+                # If we haven't seen tool_call_chunks, assume OpenAI-style
+                # and the content IS the structured output
+                if not getattr(self, "_in_target_tool", False):
+                    # First content chunk - mark as in structured output mode
+                    if stripped.startswith("{") or stripped.startswith('"'):
+                        self._in_target_tool = True
+                        self._should_reset_handler = True
+                
+                # If we're in OpenAI mode (no tool_call_chunks seen), return content
+                if getattr(self, "_in_target_tool", False):
+                    return content
+        
         return None
 
     def _extract_content_from_chunk(self, chunk) -> any:

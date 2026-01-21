@@ -2,251 +2,374 @@
 Full example: Streaming structured output with LangChain + OpenRouter.
 
 Shows the structured object being built incrementally during streaming,
-similar to Agno's approach. Demonstrates both async generator and callback patterns.
+with rich console UI displaying tool calls, structured output updates, and final results.
+Tests multiple model providers: Anthropic, OpenAI, Google, xAI.
 """
 
 import asyncio
-import json
 import time
-from typing import Callable, Optional
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any, AsyncGenerator, Optional
+
+from langchain_core.messages import HumanMessage
+from rich.console import Console
+from rich.live import Live
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
+from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 from app.agents.agents import CustomerSupportAgent
 from app.agents.structured_output.customer_support import CustomerSupportResponse
 from app.infrastructure.llm_provider import OpenRouterProvider
+from app.utils.structured_streaming import StructuredStreamingHandler
 from app.utils.logging import get_logger
 
 logger = get_logger("streaming_structured_output_example")
+console = Console()
+
+# Models to test for each provider
+PROVIDER_MODELS = {
+    "Anthropic": "anthropic/claude-4.5-sonnet",
+    "OpenAI": "openai/gpt-4o-mini",
+    "Google": "google/gemini-3-pro-preview",
+    "xAI": "x-ai/grok-4-fast",
+}
 
 
-async def streaming_with_callback_example():
-    """
-    Example using callback pattern (Agno-style).
+class EventType(Enum):
+    """Types of streaming events."""
+    TOOL_CALL_START = "tool_call_start"
+    TOOL_CALL_ARGS = "tool_call_args"
+    TOOL_RESULT = "tool_result"
+    STRUCTURED_OUTPUT_START = "structured_output_start"
+    STRUCTURED_OUTPUT_UPDATE = "structured_output_update"
+    STRUCTURED_OUTPUT_COMPLETE = "structured_output_complete"
+    ERROR = "error"
+
+
+@dataclass
+class StreamEvent:
+    """A streaming event with type and data."""
+    event_type: EventType
+    timestamp: float
+    data: dict[str, Any]
+
+
+def create_response_table(response: CustomerSupportResponse, update_num: int, elapsed: float) -> Table:
+    """Create a rich table displaying all CustomerSupportResponse fields."""
+    table = Table(
+        title=f"[bold cyan]Structured Output Update #{update_num}[/] [dim]({elapsed:.2f}s)[/]",
+        show_header=True,
+        header_style="bold magenta",
+        border_style="cyan",
+        expand=True,
+    )
     
-    Shows incremental updates as the structured object is being built.
+    table.add_column("Field", style="bold yellow", width=20)
+    table.add_column("Value", style="white")
+    
+    # Response (truncate if too long)
+    response_text = response.response
+    if len(response_text) > 200:
+        response_text = response_text[:200] + "..."
+    table.add_row("response", response_text or "[dim]<empty>[/]")
+    
+    # Sentiment with color coding
+    sentiment_colors = {"positive": "green", "neutral": "yellow", "negative": "red"}
+    sentiment_color = sentiment_colors.get(response.sentiment, "white")
+    table.add_row("sentiment", f"[{sentiment_color}]{response.sentiment}[/]")
+    
+    # Requires escalation with icon
+    escalation_icon = "🚨" if response.requires_escalation else "✅"
+    table.add_row("requires_escalation", f"{escalation_icon} {response.requires_escalation}")
+    
+    # Escalation reason
+    table.add_row("escalation_reason", response.escalation_reason or "[dim]None[/]")
+    
+    # Suggested actions as bullet list
+    if response.suggested_actions:
+        actions_text = "\n".join(f"• {action}" for action in response.suggested_actions)
+    else:
+        actions_text = "[dim]<none>[/]"
+    table.add_row("suggested_actions", actions_text)
+    
+    # Confidence with color gradient
+    conf = response.confidence
+    if conf >= 0.8:
+        conf_color = "green"
+    elif conf >= 0.5:
+        conf_color = "yellow"
+    else:
+        conf_color = "red"
+    table.add_row("confidence", f"[{conf_color}]{conf:.2f}[/]")
+    
+    return table
+
+
+def create_final_result_table(response: CustomerSupportResponse) -> Table:
+    """Create a detailed table for the final result."""
+    table = Table(
+        title="[bold green]✅ Final Structured Output[/]",
+        show_header=True,
+        header_style="bold white on blue",
+        border_style="green",
+        expand=True,
+    )
+    
+    table.add_column("Field", style="bold cyan", width=20)
+    table.add_column("Value", style="white")
+    
+    # Full response
+    table.add_row("response", response.response or "[dim]<empty>[/]")
+    
+    # Sentiment
+    sentiment_colors = {"positive": "green", "neutral": "yellow", "negative": "red"}
+    sentiment_color = sentiment_colors.get(response.sentiment, "white")
+    table.add_row("sentiment", f"[{sentiment_color} bold]{response.sentiment}[/]")
+    
+    # Requires escalation
+    escalation_icon = "🚨 YES" if response.requires_escalation else "✅ NO"
+    escalation_style = "red bold" if response.requires_escalation else "green"
+    table.add_row("requires_escalation", f"[{escalation_style}]{escalation_icon}[/]")
+    
+    # Escalation reason
+    if response.escalation_reason:
+        table.add_row("escalation_reason", f"[red]{response.escalation_reason}[/]")
+    else:
+        table.add_row("escalation_reason", "[dim]None[/]")
+    
+    # Suggested actions
+    if response.suggested_actions:
+        actions_text = "\n".join(f"[cyan]•[/] {action}" for action in response.suggested_actions)
+    else:
+        actions_text = "[dim]<none>[/]"
+    table.add_row("suggested_actions", actions_text)
+    
+    # Confidence
+    conf = response.confidence
+    if conf >= 0.8:
+        conf_style = "green bold"
+    elif conf >= 0.5:
+        conf_style = "yellow"
+    else:
+        conf_style = "red"
+    table.add_row("confidence", f"[{conf_style}]{conf:.2f}[/]")
+    
+    return table
+
+
+async def test_model_streaming(
+    provider_name: str,
+    model_name: str,
+    query: str = "Hi, how are you today?"
+) -> dict[str, Any]:
     """
-    print("=" * 60)
-    print("STREAMING STRUCTURED OUTPUT DEMO (Callback Pattern)")
-    print("=" * 60)
+    Test streaming for a specific model.
+    
+    Returns dict with results: updates, time_to_first, total_time, error
+    """
+    provider = OpenRouterProvider()
+    
+    try:
+        agent = CustomerSupportAgent(
+            llm_provider=provider,
+            model_name=model_name,
+            temperature=0.1
+        )
+        
+        start_time = time.time()
+        first_update_time = None
+        update_count = 0
+        final_response: Optional[CustomerSupportResponse] = None
+        
+        async for response in agent.handle_inquiry_stream(customer_message=query):
+            if first_update_time is None:
+                first_update_time = time.time() - start_time
+            update_count += 1
+            final_response = response
+        
+        total_time = time.time() - start_time
+        
+        return {
+            "provider": provider_name,
+            "model": model_name,
+            "updates": update_count,
+            "time_to_first": first_update_time,
+            "total_time": total_time,
+            "response_len": len(final_response.response) if final_response else 0,
+            "streams_incrementally": update_count > 2,
+            "error": None,
+        }
+    except Exception as e:
+        return {
+            "provider": provider_name,
+            "model": model_name,
+            "updates": 0,
+            "time_to_first": None,
+            "total_time": None,
+            "response_len": 0,
+            "streams_incrementally": False,
+            "error": str(e)[:50],
+        }
+
+
+async def multi_model_demo():
+    """
+    Test streaming across all provider models.
+    
+    Shows which providers support incremental streaming.
+    """
+    console.print(Panel(
+        "[bold white]Multi-Model Streaming Test[/]\n"
+        "[dim]Testing structured output streaming across Anthropic, OpenAI, Google, and xAI[/]",
+        title="🔬 Provider Comparison",
+        border_style="blue",
+    ))
+    
+    query = "Hi, how are you today?"
+    console.print(Panel(query, title="[bold cyan]📝 Test Query[/]", border_style="cyan"))
+    console.print()
+    
+    results = []
+    
+    for provider_name, model_name in PROVIDER_MODELS.items():
+        console.print(f"[bold]Testing {provider_name}[/] ({model_name})...")
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            TimeElapsedColumn(),
+            console=console,
+            transient=True,
+        ) as progress:
+            task = progress.add_task(f"[cyan]Running {provider_name}...", total=None)
+            result = await test_model_streaming(provider_name, model_name, query)
+            results.append(result)
+        
+        # Show quick result
+        if result["error"]:
+            console.print(f"   [red]❌ Error: {result['error']}[/]")
+        elif result["streams_incrementally"]:
+            console.print(f"   [green]✅ {result['updates']} updates, first at {result['time_to_first']:.2f}s[/]")
+        else:
+            console.print(f"   [yellow]⚠️  Only {result['updates']} update(s) - no incremental streaming[/]")
+        console.print()
+    
+    # Summary table
+    summary = Table(
+        title="[bold]📊 Streaming Support Summary[/]",
+        border_style="blue",
+        expand=True,
+    )
+    summary.add_column("Provider", style="bold cyan")
+    summary.add_column("Model", style="dim")
+    summary.add_column("Updates", style="white", justify="right")
+    summary.add_column("Time to First", style="white", justify="right")
+    summary.add_column("Total Time", style="white", justify="right")
+    summary.add_column("Streaming", style="white", justify="center")
+    
+    for r in results:
+        if r["error"]:
+            streaming_status = f"[red]❌ Error[/]"
+            ttf = "-"
+            total = "-"
+        elif r["streams_incrementally"]:
+            streaming_status = "[green]✅ Yes[/]"
+            ttf = f"{r['time_to_first']:.2f}s"
+            total = f"{r['total_time']:.2f}s"
+        else:
+            streaming_status = "[yellow]⚠️ No[/]"
+            ttf = f"{r['time_to_first']:.2f}s" if r['time_to_first'] else "-"
+            total = f"{r['total_time']:.2f}s" if r['total_time'] else "-"
+        
+        summary.add_row(
+            r["provider"],
+            r["model"].split("/")[-1],
+            str(r["updates"]),
+            ttf,
+            total,
+            streaming_status,
+        )
+    
+    console.print(summary)
+    
+    # Legend
+    console.print("\n[dim]Legend:[/]")
+    console.print("  [green]✅ Yes[/] = Streams token-by-token (many updates)")
+    console.print("  [yellow]⚠️ No[/] = Sends all at once (1-2 updates)")
+    console.print("  [red]❌ Error[/] = Model unavailable or requires credits")
+
+
+async def single_model_demo(model_name: str, provider_name: str):
+    """
+    Detailed demo for a single model showing streaming updates.
+    """
+    console.print(Panel(
+        f"[bold white]{provider_name} Streaming Demo[/]\n"
+        f"[dim]Model: {model_name}[/]",
+        title=f"🎯 {provider_name}",
+        border_style="green",
+    ))
     
     provider = OpenRouterProvider()
-    agent = CustomerSupportAgent(
-        llm_provider=provider,
-        model_name="anthropic/claude-4.5-sonnet",
-        temperature=0.1
-    )
     
-    query = (
-        "I need help with my order #12345. It hasn't arrived yet and I'm very frustrated! "
-        "This is the third time this has happened. I want a refund and to speak to a manager."
-    )
+    try:
+        agent = CustomerSupportAgent(
+            llm_provider=provider,
+            model_name=model_name,
+            temperature=0.1
+        )
+    except Exception as e:
+        console.print(f"[red]❌ Failed to create agent: {e}[/]")
+        return
     
-    print(f"\n🔍 Customer Query: {query}\n")
+    query = "Hi, how are you today?"
+    console.print(Panel(query, title="[bold cyan]📝 Query[/]", border_style="cyan"))
+    console.print()
     
     update_count = 0
     start_time = time.time()
+    final_response: Optional[CustomerSupportResponse] = None
     
-    def stream_callback(response: CustomerSupportResponse):
-        """Callback function called on each incremental update."""
-        nonlocal update_count
-        update_count += 1
-        elapsed = time.time() - start_time
-        # Show progress inline
-        print(f"[{elapsed:.2f}s] Update #{update_count}: "
-              f"response={len(response.response)} chars, "
-              f"sentiment={response.sentiment}, "
-              f"confidence={response.confidence:.2f}, "
-              f"actions={len(response.suggested_actions)}")
-    
-    # Stream with callback
-    result = await agent.handle_inquiry_stream_with_callback(
-        customer_message=query,
-        callback=stream_callback,
-        customer_id="customer_123",
-        session_id="streaming-session-456",
-        tags=["support", "streaming"],
-        metadata={"order_id": "12345"}
-    )
-    
-    # Show final result
-    print("\n" + "=" * 60)
-    print("✅ FINAL STRUCTURED OUTPUT:")
-    print("=" * 60)
-    print(json.dumps(result.model_dump(), indent=2))
-    
-    print(f"\n📊 Total updates received: {update_count}")
-
-
-async def streaming_async_generator_example():
-    """
-    Example using async generator pattern.
-    
-    Yields incremental updates as fields arrive.
-    """
-    print("\n" + "=" * 60)
-    print("STREAMING STRUCTURED OUTPUT DEMO (Async Generator)")
-    print("=" * 60)
-    
-    provider = OpenRouterProvider()
-    agent = CustomerSupportAgent(
-        llm_provider=provider,
-        model_name="anthropic/claude-4.5-sonnet",
-        temperature=0.1
-    )
-    
-    query = "What is your return policy? I want to return an item I bought last week."
-    
-    print(f"\n🔍 Customer Query: {query}\n")
-    
-    update_count = 0
-    start_time = time.time()
-    last_response: Optional[CustomerSupportResponse] = None
-    
-    async for partial_response in agent.handle_inquiry_stream(
-        customer_message=query,
-        customer_id="customer_789",
-        session_id="generator-session-101",
-        tags=["support", "streaming"]
-    ):
-        update_count += 1
-        elapsed = time.time() - start_time
-        last_response = partial_response
+    try:
+        async for response in agent.handle_inquiry_stream(customer_message=query):
+            update_count += 1
+            elapsed = time.time() - start_time
+            final_response = response
+            
+            # Show first 5 updates and every 10th after
+            if update_count <= 5 or update_count % 10 == 0:
+                table = create_response_table(response, update_count, elapsed)
+                console.print(table)
         
-        # Show progress - only print every 5th update to avoid spam
-        if update_count <= 5 or update_count % 5 == 0:
-            print(f"[{elapsed:.2f}s] Update #{update_count}: "
-                  f"response={len(partial_response.response)} chars, "
-                  f"sentiment={partial_response.sentiment}")
-    
-    print(f"\n✅ Streaming complete! Received {update_count} incremental updates")
-    
-    if last_response:
-        print(f"\n📝 Final response preview: {last_response.response[:100]}...")
-
-
-async def streaming_with_early_stop_example():
-    """
-    Example showing how to stop streaming early based on conditions.
-    
-    Useful for:
-    - Stopping when escalation is required
-    - Stopping when certain fields are populated
-    - Stopping when you have enough content
-    """
-    print("\n" + "=" * 60)
-    print("STREAMING WITH EARLY STOP")
-    print("=" * 60)
-    
-    provider = OpenRouterProvider()
-    agent = CustomerSupportAgent(
-        llm_provider=provider,
-        model_name="anthropic/claude-4.5-sonnet",
-        temperature=0.1
-    )
-    
-    query = "I want to cancel my subscription immediately!"
-    
-    print(f"\n🔍 Customer Query: {query}\n")
-    
-    update_count = 0
-    start_time = time.time()
-    
-    async for partial_response in agent.handle_inquiry_stream(
-        customer_message=query,
-        customer_id="customer_early_stop",
-        session_id="early-stop-session"
-    ):
-        update_count += 1
-        elapsed = time.time() - start_time
+        console.print()
+        if final_response:
+            console.print(create_final_result_table(final_response))
         
-        print(f"[{elapsed:.2f}s] Update #{update_count}: "
-              f"response={len(partial_response.response)} chars")
+        console.print(f"\n[bold green]✅ Complete![/] Received [cyan]{update_count}[/] updates")
         
-        # Stop early if escalation is required
-        if partial_response.requires_escalation and partial_response.escalation_reason:
-            print(f"\n⚠️  Early stop: Escalation required!")
-            print(f"   Reason: {partial_response.escalation_reason}")
-            break
-        
-        # Stop early if we have enough response content (e.g., for preview)
-        if len(partial_response.response) > 150:
-            print(f"\n⚠️  Early stop: Got enough content for preview!")
-            print(f"   Preview: {partial_response.response[:100]}...")
-            break
-
-
-async def comparison_example():
-    """
-    Compare streaming vs non-streaming responses.
-    
-    Shows the difference in user experience:
-    - Non-streaming: Wait for complete response
-    - Streaming: See updates as they arrive
-    """
-    print("\n" + "=" * 60)
-    print("COMPARISON: Streaming vs Non-Streaming")
-    print("=" * 60)
-    
-    provider = OpenRouterProvider()
-    agent = CustomerSupportAgent(
-        llm_provider=provider,
-        model_name="anthropic/claude-4.5-sonnet",
-        temperature=0.1
-    )
-    
-    query = "Tell me about your products and services"
-    
-    print(f"\n🔍 Query: {query}\n")
-    
-    # Non-streaming (traditional)
-    print("1️⃣  Non-streaming (waiting for complete response)...")
-    start_time = time.time()
-    response = await agent.handle_inquiry(
-        customer_message=query,
-        customer_id="customer_comparison"
-    )
-    non_streaming_time = time.time() - start_time
-    print(f"   ✅ Received complete response in {non_streaming_time:.2f}s")
-    print(f"   Response length: {len(response.response)} chars\n")
-    
-    # Streaming
-    print("2️⃣  Streaming (receiving incremental updates)...")
-    start_time = time.time()
-    first_update_time = None
-    update_count = 0
-    
-    async for partial_response in agent.handle_inquiry_stream(
-        customer_message=query,
-        customer_id="customer_comparison"
-    ):
-        if first_update_time is None:
-            first_update_time = time.time() - start_time
-            print(f"   ⚡ First update received in {first_update_time:.2f}s")
-        update_count += 1
-    
-    streaming_time = time.time() - start_time
-    print(f"   ✅ Streaming complete in {streaming_time:.2f}s")
-    print(f"   Total updates: {update_count}")
-    print(f"   Time to first update: {first_update_time:.2f}s")
-    if first_update_time:
-        improvement = non_streaming_time - first_update_time
-        print(f"   Perceived latency improvement: {improvement:.2f}s faster")
+    except Exception as e:
+        console.print(f"[red]❌ Error during streaming: {e}[/]")
 
 
 async def main():
-    """Run all examples."""
-    logger.info("🚀 Starting Streaming Structured Output Examples\n")
+    """Run all demos."""
+    console.print("\n[bold blue]═══════════════════════════════════════════════════════════[/]")
+    console.print("[bold blue]       🚀 Streaming Structured Output Examples 🚀           [/]")
+    console.print("[bold blue]═══════════════════════════════════════════════════════════[/]\n")
     
-    # Example 1: Callback pattern (Agno-style)
-    await streaming_with_callback_example()
+    # Demo 1: Multi-model comparison
+    await multi_model_demo()
+    console.print("\n" + "─" * 60 + "\n")
     
-    # Example 2: Async generator pattern
-    await streaming_async_generator_example()
+    # Demo 2: Detailed demo for each provider that supports streaming
+    for provider_name, model_name in PROVIDER_MODELS.items():
+        await single_model_demo(model_name, provider_name)
+        console.print("\n" + "─" * 60 + "\n")
     
-    # Example 3: Early stop
-    await streaming_with_early_stop_example()
-    
-    # Example 4: Comparison
-    await comparison_example()
+    console.print("\n[bold green]All demos complete![/]\n")
 
 
 if __name__ == "__main__":

@@ -231,7 +231,7 @@ class StructuredStreamingHandler:
     Only yields updates when meaningful content has changed.
     """
     
-    def __init__(self, output_schema: Type[T], yield_every_n_chars: int = 50):
+    def __init__(self, output_schema: Type[T], yield_every_n_chars: int = 5):
         """
         Initialize streaming handler.
         
