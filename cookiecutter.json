@@ -11,7 +11,7 @@
     "use_websockets": ["no", "yes"],
     "include_database": ["postgresql", "sqlite", "none"],
     "llm_provider": "openrouter",
-    "default_model": ["gpt-5", "claude-4-sonnet", "gemini-2.5-pro", "custom"],
+    "default_model": ["openai/gpt-5.2-mini", "anthropic/claude-4.5-sonnet", "google/gemini-3-pro-preview", "x-ai/grok-4-fast"],
     "vector_database": ["pinecone", "weaviate", "qdrant", "chromadb", "none"],
     "memory_type": ["vector", "redis", "hybrid", "in-memory"],
     "frontend_port": "3000",

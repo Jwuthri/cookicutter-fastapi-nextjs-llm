@@ -34,6 +34,18 @@ class Settings(BaseSettings):
     langfuse_public_key: str = ""
     langfuse_base_url: str = "https://cloud.langfuse.com"
     
+    # LangChain Tracing (LangSmith) (optional)
+    langchain_tracing_v2: bool = False
+    langchain_endpoint: str = "https://api.smith.langchain.com"
+    langchain_api_key: str = ""
+    langchain_project: str = ""
+    
+    # Vector Database (optional)
+    vector_db_api_key: str = ""
+    vector_db_url: str = ""
+    vector_db_index_name: str = ""
+    vector_db_environment: str = ""
+    
     # Logging
     log_level: str = "INFO"
     
