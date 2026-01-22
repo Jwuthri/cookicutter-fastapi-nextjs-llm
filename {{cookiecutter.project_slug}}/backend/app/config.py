@@ -34,11 +34,11 @@ class Settings(BaseSettings):
     langfuse_public_key: str = ""
     langfuse_base_url: str = "https://cloud.langfuse.com"
     
-    # LangChain Tracing (LangSmith) (optional)
-    langchain_tracing_v2: bool = False
-    langchain_endpoint: str = "https://api.smith.langchain.com"
-    langchain_api_key: str = ""
-    langchain_project: str = ""
+    # LangSmith Tracing (optional)
+    langsmith_tracing: bool = False
+    langsmith_endpoint: str = "https://api.smith.langchain.com"
+    langsmith_api_key: str = ""
+    langsmith_project: str = ""
     
     # Vector Database (optional)
     vector_db_api_key: str = ""
