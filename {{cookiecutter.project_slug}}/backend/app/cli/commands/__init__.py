@@ -2,7 +2,7 @@
 CLI commands package.
 """
 
-from . import cache, database, health, llm, logs, server, setup, worker
+from . import cache, database, health, llm, logs, server, setup, training, worker
 
 __all__ = [
     "cache",
@@ -12,5 +12,6 @@ __all__ = [
     "logs",
     "server",
     "setup",
-    "worker"
+    "training",
+    "worker",
 ]

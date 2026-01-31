@@ -20,6 +20,14 @@ This cookiecutter template generates a complete, production-ready AI agent appli
 - **AI Chat Systems** - Single agents, multi-agent teams, or step-based workflows
 - **Built-in Memory** - Vector databases with semantic search + Redis for fast access
 
+### ⚡ **Agent Training & Optimization** (NEW!)
+- **[Agent-lightning](https://github.com/microsoft/agent-lightning)** - Microsoft's framework for training AI agents
+- **APO** (Automatic Prompt Optimization) - Optimize prompts with textual gradients (no GPU needed)
+- **VERL** (Reinforcement Learning) - Fine-tune model weights via RLHF/PPO (requires GPU)
+- **SFT** (Supervised Fine-tuning) - Traditional fine-tuning with Unsloth integration
+- **CLI Commands** - Easy training via `python -m app.cli training`
+- **Complete Examples** - Ready-to-run training scripts for all methods
+
 ### 🏗️ **Modern Architecture**
 - **FastAPI Backend** - Python 3.11+ with async/await, type hints, auto-documentation
 - **Next.js Frontend** - React with App Router, TypeScript, modern dark theme
@@ -97,6 +105,7 @@ docker-compose up -d
 | `memory_type` | Memory system type | `vector`, `redis`, `hybrid`, `in-memory` |
 | `use_websockets` | Enable WebSocket support | `yes`, `no` |
 | `include_database` | Database backend | `postgresql`, `sqlite`, `none` |
+| `include_agent_training` | Include agent-lightning training infrastructure | `yes`, `no` |
 | `python_version` | Python version | `3.11`, `3.12` |
 | `node_version` | Node.js version | `18`, `20` |
 
@@ -130,6 +139,12 @@ This template is perfect for building:
 - Debug helpers
 - Architecture advisors
 
+### 🎯 **Agent Training & Optimization**
+- Train agents to improve performance automatically
+- Optimize prompts without manual engineering
+- Fine-tune models for domain-specific tasks
+- Build self-improving AI systems
+
 ---
 
 ## 📁 **Generated Project Structure**
@@ -143,6 +158,12 @@ your-ai-agent-app/
 │   │   │   ├── 📁 llm/        # OpenRouter integration
 │   │   │   ├── 📁 memory/     # Vector & Redis memory systems
 │   │   │   └── 📁 security/   # Authentication & rate limiting
+│   │   ├── 📁 agents/        # AI agent implementations
+│   │   ├── 📁 training/      # Agent-lightning training infrastructure
+│   │   │   ├── 📁 datasets/   # Training datasets
+│   │   │   ├── 📁 litagent/  # LitAgent wrappers
+│   │   │   └── 📁 rewards/   # Reward functions
+│   │   ├── 📁 examples/      # Training examples (APO, VERL, SFT)
 │   │   ├── 📁 models/         # Pydantic data models
 │   │   ├── 📁 services/       # Business logic services
 │   │   └── 📄 main.py         # FastAPI application entry point
@@ -188,6 +209,8 @@ your-ai-agent-app/
 - `frontend/src/components/chat/` - Chat interface components
 - `backend/app/config.py` - Application settings
 - `frontend/src/app/page.tsx` - Homepage and routing
+- `backend/app/training/` - Agent training configuration and datasets
+- `backend/app/examples/` - Training examples (APO, VERL, SFT)
 
 ---
 
@@ -220,6 +243,15 @@ Access **500+ models** through OpenRouter:
 ## 🧩 **Extensions & Integrations**
 
 The generated project supports easy integration with:
+
+### **Agent Training** ⚡
+- **[Agent-lightning](https://github.com/microsoft/agent-lightning)** - Train and optimize AI agents
+  - **APO** - Automatic Prompt Optimization (no GPU needed)
+  - **VERL** - Reinforcement Learning fine-tuning (requires GPU)
+  - **SFT** - Supervised Fine-tuning with Unsloth
+- **CLI Commands** - `python -m app.cli training apo/verl/sft`
+- **Training Examples** - Complete examples in `backend/app/examples/`
+- **Reward Functions** - Customizable reward signals for RL training
 
 ### **Databases**
 - PostgreSQL, SQLite (built-in)
@@ -287,6 +319,48 @@ docker-compose up -d
 
 ---
 
+## 🎓 **Agent Training Guide**
+
+### **Quick Start with APO (Prompt Optimization)**
+
+```bash
+# Train your agent with Automatic Prompt Optimization
+python -m app.cli training apo --agent customer_support --rounds 3
+
+# Or use the Python API
+python -m app.examples.apo_example
+```
+
+### **Reinforcement Learning (VERL)**
+
+```bash
+# Fine-tune model weights with RL (requires GPU)
+python -m app.cli training verl --agent customer_support --epochs 2
+
+# Or use the Python API
+python -m app.examples.verl_example
+```
+
+### **Supervised Fine-tuning (SFT)**
+
+```bash
+# Traditional fine-tuning with labeled data
+python -m app.cli training sft --agent customer_support
+
+# Or use the Python API
+python -m app.examples.sft_example
+```
+
+### **Training Methods Comparison**
+
+| Method | What It Optimizes | GPU Required | Best For |
+|--------|------------------|--------------|----------|
+| **APO** | Prompt templates | ❌ No | Quick improvements, prompt engineering |
+| **VERL** | Model weights | ✅ Yes (40GB+) | Complex tasks, multi-step reasoning |
+| **SFT** | Model weights | ✅ Yes | When you have labeled examples |
+
+See `backend/app/examples/` for complete training examples.
+
 ## 📚 **Resources**
 
 ### **Documentation**
@@ -294,11 +368,13 @@ docker-compose up -d
 - [FastAPI Docs](https://fastapi.tiangolo.com) - Backend framework
 - [Next.js Docs](https://nextjs.org/docs) - Frontend framework
 - [uv Documentation](https://docs.astral.sh/uv/) - Python package manager
+- [Agent-lightning Docs](https://microsoft.github.io/agent-lightning/) - Agent training framework
 
 ### **Tutorials**
 - [OpenRouter Model Comparison](https://openrouter.ai/models)
 - [Vector Database Guide](https://example.com) - Choosing the right vector DB
 - [Production Deployment Guide](https://example.com) - Deploy your AI app
+- [Agent Training Tutorial](https://microsoft.github.io/agent-lightning/stable/tutorials/write-agents/) - Train your first agent
 
 ---
 
@@ -319,6 +395,7 @@ This template is licensed under the MIT License - see the [LICENSE](LICENSE) fil
 ## 🙏 **Acknowledgments**
 
 - **[OpenRouter](https://openrouter.ai)** - Unified model access
+- **[Agent-lightning](https://github.com/microsoft/agent-lightning)** - Agent training framework
 - **[Cookiecutter](https://cookiecutter.readthedocs.io/)** - Project templating
 - **[FastAPI](https://fastapi.tiangolo.com)** - Modern Python web framework
 - **[Next.js](https://nextjs.org)** - React framework for production

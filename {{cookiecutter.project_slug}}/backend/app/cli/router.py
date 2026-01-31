@@ -2,7 +2,7 @@
 CLI command router for {{cookiecutter.project_name}}.
 """
 
-from .commands import cache, database, health, llm, logs, server, setup, worker
+from .commands import cache, database, health, llm, logs, server, setup, training, worker
 
 
 def setup_commands(cli):
@@ -17,3 +17,4 @@ def setup_commands(cli):
     cli.add_command(cache.cache)
     cli.add_command(logs.logs)
     cli.add_command(worker.worker)
+    cli.add_command(training.training)
