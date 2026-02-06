@@ -8,7 +8,6 @@
     "version": "0.1.0",
     "python_version": "3.11",
     "node_version": "18",
-    "use_websockets": ["no", "yes"],
     "include_database": ["postgresql", "sqlite", "none"],
     "llm_provider": "openrouter",
     "default_model": ["openai/gpt-5.2-mini", "anthropic/claude-4.5-sonnet", "google/gemini-3-pro-preview", "x-ai/grok-4-fast"],

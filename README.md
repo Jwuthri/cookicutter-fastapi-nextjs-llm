@@ -74,7 +74,6 @@ author_email [your.email@example.com]: john@example.com
 version [0.1.0]:
 python_version [3.11]:
 node_version [18]:
-use_websockets [yes]:
 include_database [postgresql]:
 default_model [gpt-4]: gpt-5
 vector_database [pinecone]:
@@ -103,7 +102,6 @@ docker-compose up -d
 | `default_model` | Default AI model | `gpt-4`, `claude-3-5-sonnet`, `gemini-2.5-pro`, `gpt-5`, `custom` |
 | `vector_database` | Vector DB for AI memory | `pinecone`, `weaviate`, `qdrant`, `chromadb`, `none` |
 | `memory_type` | Memory system type | `vector`, `redis`, `hybrid`, `in-memory` |
-| `use_websockets` | Enable WebSocket support | `yes`, `no` |
 | `include_database` | Database backend | `postgresql`, `sqlite`, `none` |
 | `include_agent_training` | Include agent-lightning training infrastructure | `yes`, `no` |
 | `python_version` | Python version | `3.11`, `3.12` |

@@ -70,6 +70,17 @@ dependencies = [
 
     # Rate limiting
     "slowapi>=0.1.9",
+
+    # Vector database (LangChain integration)
+    {% if cookiecutter.vector_database == "pinecone" %}
+    "langchain-pinecone>=0.2.0",
+    {% elif cookiecutter.vector_database == "weaviate" %}
+    "langchain-weaviate>=0.1.0",
+    {% elif cookiecutter.vector_database == "qdrant" %}
+    "langchain-qdrant>=0.2.0",
+    {% elif cookiecutter.vector_database == "chromadb" %}
+    "langchain-chroma>=0.2.0",
+    {% endif %}
 ]
 
 [project.optional-dependencies]
