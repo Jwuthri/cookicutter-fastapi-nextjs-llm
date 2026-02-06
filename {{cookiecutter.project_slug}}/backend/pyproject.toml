@@ -6,7 +6,7 @@ authors = [
     {name = "{{cookiecutter.author_name}}", email = "{{cookiecutter.author_email}}"}
 ]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">={{cookiecutter.python_version}}"
 license = {text = "MIT"}
 keywords = ["fastapi", "api", "backend"]
 classifiers = [
@@ -14,8 +14,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: {{cookiecutter.python_version}}",
     "Framework :: FastAPI",
 ]
 
@@ -120,7 +119,7 @@ packages = ["app"]
 
 [tool.black]
 line-length = 88
-target-version = ['py311']
+target-version = ['py{{cookiecutter.python_version.replace(".", "")}}']
 include = '\.pyi?$'
 
 [tool.isort]
@@ -130,12 +129,12 @@ line_length = 88
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py{{cookiecutter.python_version.replace(".", "")}}"
 select = ["E", "F", "W", "B", "I"]
 ignore = ["E203", "W503"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "{{cookiecutter.python_version}}"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
