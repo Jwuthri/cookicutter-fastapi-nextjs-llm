@@ -192,13 +192,18 @@ async def get_user_by_id(
     Get user profile by ID.
 
     Requires authentication. Users can only access their own profile
-    unless they have admin privileges.
+    unless they have admin privileges (role: admin or superadmin).
+
+    Roles are stored in Clerk's public_metadata.role field.
     """
-    # Check if user is requesting their own profile
-    if current_user.id != user_id:
-        # TODO: Add admin role checking here if needed
+    # Check if user can access this profile (own profile or admin)
+    if not current_user.can_access_user(user_id):
+        logger.warning(
+            f"Access denied: User {current_user.id} (role: {current_user.role}) "
+            f"attempted to access user {user_id}"
+        )
         return APIResponseWrapper.forbidden(
-            message="Access denied: You can only access your own profile",
+            message="Access denied: You can only access your own profile unless you have admin privileges",
             request=request
         )
 

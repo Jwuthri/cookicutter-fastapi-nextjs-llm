@@ -92,6 +92,10 @@ def setup_middleware(app):
     # Request logging (last, so it captures everything)
     app.add_middleware(LoggingMiddleware)
 
+    # Rate limiting
+    from .rate_limit import setup_rate_limiting
+    setup_rate_limiting(app)
+
 
 __all__ = [
     "LoggingMiddleware",

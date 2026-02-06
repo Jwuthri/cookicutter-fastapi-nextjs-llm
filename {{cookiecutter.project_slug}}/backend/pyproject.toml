@@ -67,6 +67,9 @@ dependencies = [
     # Logging
     "rich>=13.7.0",
     "python-json-logger>=2.0.7",
+
+    # Rate limiting
+    "slowapi>=0.1.9",
 ]
 
 [project.optional-dependencies]

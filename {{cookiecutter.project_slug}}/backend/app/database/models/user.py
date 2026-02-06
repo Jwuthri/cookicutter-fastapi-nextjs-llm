@@ -10,6 +10,8 @@ from sqlalchemy import JSON, Boolean, Column, DateTime
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import String
 
+from sqlalchemy.orm import relationship
+
 from ..base import Base
 
 
@@ -31,7 +33,10 @@ class User(Base):
     full_name = Column(String(255), nullable=True)
     status = Column(SQLEnum(UserStatusEnum), default=UserStatusEnum.ACTIVE)
     is_superuser = Column(Boolean, default=False)
-    
+
+    # Role for RBAC (synced from Clerk public_metadata)
+    role = Column(String(50), default="user")
+
     @property
     def is_active(self) -> bool:
         """Check if user is active based on status."""
@@ -46,7 +51,10 @@ class User(Base):
     preferences = Column(JSON, default={})
     extra_metadata = Column(JSON, default={})
 
-    # Relationships (none for now)
+    # Relationships
+    conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+    agents = relationship("Agent", back_populates="creator")
+    agent_runs = relationship("AgentRun", back_populates="user")
 
     def __repr__(self):
         return f"<User(id={self.id}, clerk_id={self.clerk_id}, email={self.email}, status={self.status})>"

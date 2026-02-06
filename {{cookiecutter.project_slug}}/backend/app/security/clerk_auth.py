@@ -24,6 +24,9 @@ security = HTTPBearer(auto_error=False)
 class ClerkUser:
     """Represents a Clerk user with essential information."""
 
+    # Role hierarchy (higher index = more permissions)
+    ROLE_HIERARCHY = ["user", "moderator", "admin", "superadmin"]
+
     def __init__(self, user_data: Dict[str, Any]):
         self.id: str = user_data.get("sub", "")
         self.user_id: str = user_data.get("sub", "")  # Alias for compatibility
@@ -38,11 +41,42 @@ class ClerkUser:
         self.metadata: Dict[str, Any] = user_data.get("public_metadata", {})
         self.raw_data: Dict[str, Any] = user_data
 
+        # Role from public_metadata (default to "user")
+        self.role: str = self.metadata.get("role", "user")
+
         # Parse timestamps if available
         if "iat" in user_data:
             self.created_at = datetime.fromtimestamp(user_data["iat"])
         if "exp" in user_data:
             self.updated_at = datetime.fromtimestamp(user_data["exp"])
+
+    @property
+    def is_admin(self) -> bool:
+        """Check if user has admin or superadmin role."""
+        return self.role in ["admin", "superadmin"]
+
+    @property
+    def is_superadmin(self) -> bool:
+        """Check if user has superadmin role."""
+        return self.role == "superadmin"
+
+    def has_role(self, required_role: str) -> bool:
+        """Check if user has at least the required role level."""
+        try:
+            user_level = self.ROLE_HIERARCHY.index(self.role)
+            required_level = self.ROLE_HIERARCHY.index(required_role)
+            return user_level >= required_level
+        except ValueError:
+            # Unknown role, default to no access
+            return False
+
+    def can_access_user(self, target_user_id: str) -> bool:
+        """Check if this user can access another user's data."""
+        # Users can always access their own data
+        if self.id == target_user_id:
+            return True
+        # Admins can access any user's data
+        return self.is_admin
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert user to dictionary representation."""
@@ -56,7 +90,8 @@ class ClerkUser:
             "image_url": self.image_url,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "metadata": self.metadata
+            "metadata": self.metadata,
+            "role": self.role
         }
 
 
@@ -241,6 +276,42 @@ async def require_current_user(
         )
 
 
+async def require_admin(
+    current_user: ClerkUser = Depends(require_current_user)
+) -> ClerkUser:
+    """
+    Require the current user to have admin privileges.
+    Raises HTTPException if user is not an admin.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin privileges required"
+        )
+    return current_user
+
+
+def require_role(required_role: str):
+    """
+    Factory function to create a dependency that requires a specific role.
+
+    Usage:
+        @router.get("/admin-only")
+        async def admin_endpoint(user: ClerkUser = Depends(require_role("admin"))):
+            ...
+    """
+    async def role_checker(
+        current_user: ClerkUser = Depends(require_current_user)
+    ) -> ClerkUser:
+        if not current_user.has_role(required_role):
+            raise HTTPException(
+                status_code=403,
+                detail=f"Role '{required_role}' or higher required"
+            )
+        return current_user
+    return role_checker
+
+
 def require_auth(func):
     """
     Decorator to require authentication for a function.
@@ -286,6 +357,8 @@ __all__ = [
     "get_clerk_provider",
     "get_current_user",
     "require_current_user",
+    "require_admin",
+    "require_role",
     "require_auth",
     "validate_clerk_config",
 ]
