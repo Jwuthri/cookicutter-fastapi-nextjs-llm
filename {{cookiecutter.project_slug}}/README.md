@@ -107,7 +107,7 @@ docker-compose up -d
 cd backend
 uv venv
 source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
-uv pip install -e .
+uv pip install -e ".[dev]"
 uvicorn app.main:app --reload --host 0.0.0.0 --port {{cookiecutter.backend_port}}
 
 # Frontend (in another terminal)
@@ -115,6 +115,22 @@ cd frontend
 npm install
 npm run dev
 ```
+
+### 4b. **Optional Poe Task Runner**
+
+This template includes basic [`Poe the Poet`](https://poethepoet.natn.io/installation.html) tasks for common development commands.
+
+```bash
+# Recommended: install poe globally once
+uv tool install poethepoet
+
+# Then inside backend/
+poe dev
+poe test
+poe frontend
+```
+
+If you prefer not to install `poe` globally, the backend dev extras include it, so `uv run poe dev` also works after `uv pip install -e ".[dev]"`.
 
 ### 5. **Access Your Application** 🎉
 - **Frontend**: http://localhost:{{cookiecutter.frontend_port}}

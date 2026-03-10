@@ -138,10 +138,10 @@ CLERK_PUBLISHABLE_KEY=pk_test_...
 curl -LsSf https://astral.sh/uv/install.sh | sh
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uv pip install -e .
+uv pip install -e ".[dev]"
 
 # Or using pip
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 ### 3. Database Setup
@@ -163,6 +163,24 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 # Or using Python directly
 python -m app.main
 ```
+
+### Poe Commands
+
+[`Poe the Poet`](https://poethepoet.natn.io/installation.html) is configured for a few common workflows. Install it globally for the best CLI experience:
+
+```bash
+uv tool install poethepoet
+```
+
+Then, from the `backend/` directory, use:
+
+```bash
+poe dev       # Start the FastAPI dev server
+poe test      # Run backend tests
+poe frontend  # Start the Next.js frontend from the monorepo
+```
+
+If you do not want a global install, `poethepoet` is also included in the backend dev extras, so `uv run poe dev` works after installing `".[dev]"`.
 
 ### 5. Access the Application
 
